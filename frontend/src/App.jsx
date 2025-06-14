@@ -11,11 +11,18 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
 
-  const addProduct = useCallback((p) => {
-    setCart((c) => [...c, p]);
-    setToast({ msg: `${p.name} を追加しました。`, type: "success" });
+  /* 追加 */
+  const addProduct = useCallback((product) => {
+    setCart((c) => [...c, product]);
+    setToast({ msg: `${product.name} を追加しました。`, type: "success" });
   }, []);
 
+  /* 削除 */
+  const removeProduct = useCallback((index) => {
+    setCart((c) => c.filter((_, i) => i !== index));
+  }, []);
+
+  /* バーコード */
   const handleScan = useCallback(
     (code) => {
       const found = products.find((p) => p.barcode === code);
@@ -30,6 +37,7 @@ export default function App() {
     },
     [addProduct]
   );
+
   useBarcodeScanner(handleScan);
 
   return (
@@ -47,10 +55,10 @@ export default function App() {
         />
       </div>
 
-      {/* メイン */}
+      {/* 商品 & カート */}
       <div className="flex flex-col lg:flex-row gap-12">
         <ProductList onAdd={addProduct} />
-        <CartList cart={cart} />
+        <CartList cart={cart} onRemove={removeProduct} />
       </div>
 
       {/* 確定ボタン */}
@@ -63,6 +71,7 @@ export default function App() {
         ✅ 確定
       </button>
 
+      {/* トースト */}
       {toast && (
         <Toast
           message={toast.msg}
