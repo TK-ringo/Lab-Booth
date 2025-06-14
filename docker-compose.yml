@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile # 先ほど作成したファイル
+    container_name: myshop_frontend
+    ports:
+      - "3000:80" # ローカル 3000 → コンテナ 80
+    restart: unless-stopped
