@@ -1,0 +1,22 @@
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+docker-compose.override.yml
+
+# npm workspaces のルート node_modules（必要なら）
+node_modules/
+
+# VSCode 拡張設定以外は無視
+!.vscode/extensions.json

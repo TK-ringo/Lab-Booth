@@ -1,10 +1,33 @@
-version: "3.9"
+# docker-compose.yml
+# version: "3.9"
+
 services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: myshop_backend
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/data:/app/data # SQLite のデータ永続化
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile # 先ほど作成したファイル
+      context: ./ # ルートから見て frontend ディレクトリを含む
+      dockerfile: frontend/Dockerfile
     container_name: myshop_frontend
     ports:
-      - "3000:80" # ローカル 3000 → コンテナ 80
+      - "3000:80" # ローカル3000 → nginx:80
+    environment:
+      VITE_API_BASE: "http://backend:3001" # フロントからバックエンドへのベースURL
+    depends_on:
+      - backend # backend が先に立ち上がるよう依存
     restart: unless-stopped
+
+# ボリューム定義（必要ならば追加可）
+volumes:
+  backend_data:

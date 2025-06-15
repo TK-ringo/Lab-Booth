@@ -1,0 +1,11 @@
+# Node.js 依存
+node_modules/
+
+# 環境設定
+.env
+
+# SQLite データベース
+data/
+
+# ログ
+*.log

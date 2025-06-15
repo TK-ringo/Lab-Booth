@@ -1,6 +1,11 @@
+// src/components/ProductCard.jsx
 export default function ProductCard({ product, onAdd }) {
   return (
-    <div className="group relative overflow-hidden rounded-3xl bg-gray-800/50 backdrop-blur-md shadow-glass p-4 flex flex-col gap-3 hover:scale-[1.03] transition">
+    <div
+      className="group relative overflow-hidden rounded-3xl bg-gray-800/50
+                   backdrop-blur-md shadow-glass p-4 flex flex-col gap-3
+                   hover:scale-[1.03] transition"
+    >
       <img
         src={product.image}
         alt={product.name}
@@ -16,7 +21,10 @@ export default function ProductCard({ product, onAdd }) {
       <button
         onClick={() => onAdd(product)}
         disabled={product.stock <= 0}
-        className="mt-auto w-full py-2 font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 transition text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-auto w-full py-2 font-semibold rounded-xl
+                   bg-gradient-to-r from-indigo-600 to-purple-600
+                   hover:opacity-90 transition text-white
+                   disabled:opacity-50 disabled:cursor-not-allowed"
       >
         追加
       </button>

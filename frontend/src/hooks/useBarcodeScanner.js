@@ -1,3 +1,4 @@
+// src/hooks/useBarcodeScanner.js
 import { useEffect } from "react";
 
 export default function useBarcodeScanner(onScan) {
@@ -5,7 +6,6 @@ export default function useBarcodeScanner(onScan) {
     let buf = "";
     let timer = null;
     const handler = (e) => {
-      // input / textarea にフォーカス中は処理をスキップ
       const tag = document.activeElement.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 

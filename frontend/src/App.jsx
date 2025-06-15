@@ -1,16 +1,35 @@
-import { useState, useCallback } from "react";
+// src/App.jsx
+import { useState, useEffect, useCallback } from "react";
+import { fetchMembers, fetchProducts, postPurchase } from "./api";
 import NameSelector from "./components/NameSelector";
 import ProductList from "./components/ProductList";
 import CartList from "./components/CartList";
 import Toast from "./components/Toast";
 import useBarcodeScanner from "./hooks/useBarcodeScanner";
-import { products as initialProducts } from "./data/sampleData";
 
 export default function App() {
-  const [currentName, setCurrentName] = useState("");
-  const [products, setProducts] = useState(initialProducts);
+  const [members, setMembers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [currentMember, setMember] = useState(null);
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
+  const [isLoading, setLoading] = useState(true);
+
+  // 初期データ取得
+  useEffect(() => {
+    (async () => {
+      try {
+        const [ms, ps] = await Promise.all([fetchMembers(), fetchProducts()]);
+        setMembers(ms);
+        setProducts(ps);
+      } catch (err) {
+        console.error(err);
+        setToast({ msg: "初期データの取得に失敗しました😢", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   // カートに追加＋在庫デクリメント
   const addProduct = useCallback((product) => {
@@ -18,7 +37,7 @@ export default function App() {
     setProducts((ps) =>
       ps.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
     );
-    setToast({ msg: `${product.name} を追加しました。`, type: "success" });
+    setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
   }, []);
 
   // カートから削除＋在庫インクリメント
@@ -32,7 +51,32 @@ export default function App() {
     });
   }, []);
 
-  // バーコードスキャン処理：在庫があるものだけ追加
+  // 確定ボタン押下時
+  const handleConfirm = async () => {
+    if (!currentMember) {
+      setToast({ msg: "名前を選択してください", type: "info" });
+      return;
+    }
+    if (cart.length === 0) {
+      setToast({ msg: "まず商品を追加してください", type: "info" });
+      return;
+    }
+    try {
+      const { members: ms, products: ps } = await postPurchase({
+        memberId: currentMember.id,
+        productIds: cart.map((p) => p.id),
+      });
+      setMembers(ms);
+      setProducts(ps);
+      setCart([]);
+      setToast({ msg: "購入が完了しました🎉", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ msg: "購入処理に失敗しました😢", type: "error" });
+    }
+  };
+
+  // バーコード読み取り時
   const handleScan = useCallback(
     (code) => {
       const found = products.find((p) => p.barcode === code && p.stock > 0);
@@ -45,43 +89,47 @@ export default function App() {
         });
       }
     },
-    [addProduct, products]
+    [products, addProduct]
   );
 
+  // フォーカスしていないときのみスキャン有効
   useBarcodeScanner(handleScan);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center text-xl">
+        読み込み中…
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
-      {/* タイトル */}
-      <h1 className="text-5xl md:text-6xl font-extrabold text-center tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+      <h1
+        className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
+                     bg-clip-text text-transparent bg-gradient-to-r
+                     from-indigo-400 via-purple-400 to-pink-400"
+      >
         ISELab Shop
       </h1>
 
-      {/* 名前選択 */}
       <div className="flex justify-center">
         <NameSelector
-          currentName={currentName}
-          setCurrentName={setCurrentName}
+          members={members}
+          currentMember={currentMember}
+          setCurrentMember={setMember}
         />
       </div>
 
-      {/* 商品 & カート */}
       <div className="flex flex-col lg:flex-row gap-12">
         <ProductList products={products} onAdd={addProduct} />
-        <CartList cart={cart} onRemove={removeProduct} />
+        <CartList
+          cart={cart}
+          onRemove={removeProduct}
+          onConfirm={handleConfirm}
+        />
       </div>
 
-      {/* 確定ボタン */}
-      <button
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 w-3/5 rounded-full py-6 text-2xl font-extrabold text-white bg-gradient-to-r from-emerald-600 to-teal-500 hover:opacity-90 transition shadow-2xl backdrop-blur-md"
-        onClick={() =>
-          setToast({ msg: "購入確定機能は未実装です。", type: "info" })
-        }
-      >
-        ✅ 確定
-      </button>
-
-      {/* トースト */}
       {toast && (
         <Toast
           message={toast.msg}
