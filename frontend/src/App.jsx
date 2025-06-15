@@ -4,28 +4,38 @@ import ProductList from "./components/ProductList";
 import CartList from "./components/CartList";
 import Toast from "./components/Toast";
 import useBarcodeScanner from "./hooks/useBarcodeScanner";
-import { products } from "./data/sampleData";
+import { products as initialProducts } from "./data/sampleData";
 
 export default function App() {
   const [currentName, setCurrentName] = useState("");
+  const [products, setProducts] = useState(initialProducts);
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
 
-  /* 追加 */
+  // カートに追加＋在庫デクリメント
   const addProduct = useCallback((product) => {
     setCart((c) => [...c, product]);
+    setProducts((ps) =>
+      ps.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
+    );
     setToast({ msg: `${product.name} を追加しました。`, type: "success" });
   }, []);
 
-  /* 削除 */
+  // カートから削除＋在庫インクリメント
   const removeProduct = useCallback((index) => {
-    setCart((c) => c.filter((_, i) => i !== index));
+    setCart((c) => {
+      const removed = c[index];
+      setProducts((ps) =>
+        ps.map((p) => (p.id === removed.id ? { ...p, stock: p.stock + 1 } : p))
+      );
+      return c.filter((_, i) => i !== index);
+    });
   }, []);
 
-  /* バーコード */
+  // バーコードスキャン処理：在庫があるものだけ追加
   const handleScan = useCallback(
     (code) => {
-      const found = products.find((p) => p.barcode === code);
+      const found = products.find((p) => p.barcode === code && p.stock > 0);
       if (found) {
         addProduct(found);
       } else {
@@ -35,7 +45,7 @@ export default function App() {
         });
       }
     },
-    [addProduct]
+    [addProduct, products]
   );
 
   useBarcodeScanner(handleScan);
@@ -57,7 +67,7 @@ export default function App() {
 
       {/* 商品 & カート */}
       <div className="flex flex-col lg:flex-row gap-12">
-        <ProductList onAdd={addProduct} />
+        <ProductList products={products} onAdd={addProduct} />
         <CartList cart={cart} onRemove={removeProduct} />
       </div>
 

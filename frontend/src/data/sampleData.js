@@ -17,6 +17,7 @@ export const products = [
     price: 120,
     image: "/img/choco.jpg",
     barcode: "4901234567890",
+    stock: 10,
   },
   {
     id: 2,
@@ -24,6 +25,7 @@ export const products = [
     price: 150,
     image: "/img/chips.jpg",
     barcode: "4909876543210",
+    stock: 8,
   },
   {
     id: 3,
@@ -31,6 +33,7 @@ export const products = [
     price: 110,
     image: "/img/tea.jpg",
     barcode: "4512345678901",
+    stock: 12,
   },
   {
     id: 4,
@@ -38,6 +41,7 @@ export const products = [
     price: 130,
     image: "/img/coffee.jpg",
     barcode: "4512345678902",
+    stock: 5,
   },
   {
     id: 5,
@@ -45,6 +49,7 @@ export const products = [
     price: 210,
     image: "/img/energy.jpg",
     barcode: "4512345678903",
+    stock: 0,
   },
   {
     id: 6,
@@ -52,5 +57,6 @@ export const products = [
     price: 210,
     image: "/img/energy.jpg",
     barcode: "9784798063546",
+    stock: 3,
   },
 ];
