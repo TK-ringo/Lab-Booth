@@ -6,7 +6,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: myshop_backend
+    container_name: iselab_shop_backend
     env_file:
       - ./backend/.env
     volumes:
@@ -19,7 +19,7 @@ services:
     build:
       context: ./ # ルートから見て frontend ディレクトリを含む
       dockerfile: frontend/Dockerfile
-    container_name: myshop_frontend
+    container_name: iselab_shop_frontend
     ports:
       - "3000:80" # ローカル3000 → nginx:80
     environment:
