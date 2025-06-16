@@ -18,7 +18,5 @@ docker-compose.override.yml
 # npm workspaces のルート node_modules（必要なら）
 node_modules/
 
-package*.json
-
 # VSCode 拡張設定以外は無視
 !.vscode/extensions.json
