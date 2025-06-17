@@ -1,18 +1,15 @@
-// backend/src/index.js
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import db from "./db/init.js";
 
 dotenv.config();
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-// 1) メンバー一覧取得
+// メンバー一覧取得
 app.get("/api/members", (req, res) => {
   try {
-    const members = db.prepare(`SELECT * FROM members`).all();
+    const members = db.prepare("SELECT * FROM members").all();
     res.json({ members });
   } catch (err) {
     console.error(err);
@@ -20,10 +17,10 @@ app.get("/api/members", (req, res) => {
   }
 });
 
-// 2) 商品一覧取得
+// 商品一覧取得
 app.get("/api/products", (req, res) => {
   try {
-    const products = db.prepare(`SELECT * FROM products`).all();
+    const products = db.prepare("SELECT * FROM products").all();
     res.json({ products });
   } catch (err) {
     console.error(err);
@@ -31,19 +28,18 @@ app.get("/api/products", (req, res) => {
   }
 });
 
-// 3) 購入処理
+// 購入処理
 app.post("/api/purchase", (req, res) => {
   try {
     const { memberId, productIds } = req.body;
     const now = new Date().toISOString();
-
     const insert = db.prepare(`
       INSERT INTO purchases (member_id, product_id, timestamp)
       VALUES (?, ?, ?)
     `);
-    const updateStock = db.prepare(`
-      UPDATE products SET stock = stock - 1 WHERE id = ?
-    `);
+    const updateStock = db.prepare(
+      "UPDATE products SET stock = stock - 1 WHERE id = ?"
+    );
 
     db.transaction(() => {
       productIds.forEach((pid) => {
@@ -53,8 +49,8 @@ app.post("/api/purchase", (req, res) => {
     })();
 
     // 更新後データを返却
-    const members = db.prepare(`SELECT * FROM members`).all();
-    const products = db.prepare(`SELECT * FROM products`).all();
+    const members = db.prepare("SELECT * FROM members").all();
+    const products = db.prepare("SELECT * FROM products").all();
     res.json({ members, products });
   } catch (err) {
     console.error(err);

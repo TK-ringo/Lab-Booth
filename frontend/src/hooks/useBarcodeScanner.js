@@ -1,4 +1,3 @@
-// src/hooks/useBarcodeScanner.js
 import { useEffect } from "react";
 
 export default function useBarcodeScanner(onScan) {
@@ -18,7 +17,7 @@ export default function useBarcodeScanner(onScan) {
       if (/^[\da-zA-Z]$/.test(e.key)) {
         buf += e.key;
         clearTimeout(timer);
-        timer = setTimeout(() => (buf = ""), 50);
+        timer = setTimeout(() => (buf = ""), 150);
       }
     };
     window.addEventListener("keydown", handler);

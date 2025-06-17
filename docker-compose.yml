@@ -1,33 +1,25 @@
-# docker-compose.yml
-# version: "3.9"
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: iselab_shop_backend
     env_file:
       - ./backend/.env
     volumes:
-      - ./backend/data:/app/data # SQLite のデータ永続化
+      - ./backend/data:/app/data
     ports:
       - "3001:3001"
     restart: unless-stopped
 
   frontend:
     build:
-      context: ./ # ルートから見て frontend ディレクトリを含む
-      dockerfile: frontend/Dockerfile
-    container_name: iselab_shop_frontend
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3000:80" # ローカル3000 → nginx:80
+      - "3000:80"
     environment:
-      VITE_API_BASE: "http://backend:3001" # フロントからバックエンドへのベースURL
+      VITE_API_BASE: "/api"
     depends_on:
-      - backend # backend が先に立ち上がるよう依存
+      - backend
     restart: unless-stopped
-
-# ボリューム定義（必要ならば追加可）
-volumes:
-  backend_data:
+# ``` :contentReference[oaicite:1]{index=1}

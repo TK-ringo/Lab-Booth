@@ -1,22 +1,19 @@
-// src/api.js
-const BASE = import.meta.env.VITE_API_BASE || "";
+const BASE = import.meta.env.VITE_API_BASE || "/api";
 
 export async function fetchMembers() {
-  const res = await fetch(`${BASE}/api/members`);
+  const res = await fetch(`${BASE}/members`);
   if (!res.ok) throw new Error("メンバー取得に失敗しました");
-  const { members } = await res.json();
-  return members;
+  return (await res.json()).members;
 }
 
 export async function fetchProducts() {
-  const res = await fetch(`${BASE}/api/products`);
+  const res = await fetch(`${BASE}/products`);
   if (!res.ok) throw new Error("商品取得に失敗しました");
-  const { products } = await res.json();
-  return products;
+  return (await res.json()).products;
 }
 
 export async function postPurchase({ memberId, productIds }) {
-  const res = await fetch(`${BASE}/api/purchase`, {
+  const res = await fetch(`${BASE}/purchase`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ memberId, productIds }),
