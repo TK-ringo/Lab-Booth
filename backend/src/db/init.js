@@ -33,18 +33,18 @@ db.exec(`
   );
 `);
 
-// サンプルデータ投入（初回のみ）
-const count = db.prepare("SELECT COUNT(*) as cnt FROM members").get().cnt;
-if (count === 0) {
-  const insertMember = db.prepare("INSERT INTO members (name) VALUES (?)");
-  ["Alice", "Bob", "Carol"].forEach((name) => insertMember.run(name));
+// // サンプルデータ投入（初回のみ）
+// const count = db.prepare("SELECT COUNT(*) as cnt FROM members").get().cnt;
+// if (count === 0) {
+//   const insertMember = db.prepare("INSERT INTO members (name) VALUES (?)");
+//   ["Alice", "Bob", "Carol"].forEach((name) => insertMember.run(name));
 
-  const insertProduct = db.prepare(`
-    INSERT INTO products (name, price, stock, barcode, image)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  insertProduct.run("Notebook", 200, 10, "9784798063546", "/img/notebook.jpg");
-  insertProduct.run("Pen", 100, 20, "0987654321", "/img/pen.png");
-}
+//   const insertProduct = db.prepare(`
+//     INSERT INTO products (name, price, stock, barcode, image)
+//     VALUES (?, ?, ?, ?, ?)
+//   `);
+//   insertProduct.run("Notebook", 200, 10, "9784798063546", "/img/notebook.jpg");
+//   insertProduct.run("Pen", 100, 20, "0987654321", "/img/pen.png");
+// }
 
 export default db;
