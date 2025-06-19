@@ -14,10 +14,14 @@ export default function ProductList({ products, onAdd }) {
   );
 
   return (
-    <div className="flex flex-col w-full lg:w-2/3">
+    /* ←───────────────────────────────→
+       高さ可変の子を抱える親なので min-h-0 を追加！
+    */
+    <div className="flex flex-col w-full lg:w-2/3 min-h-0">
+      {/* ── 検索ボックス（高さ固定・sticky） ── */}
       <div
         className="sticky top-0 z-10 pb-4 bg-gradient-to-b
-                      from-gray-900/90 to-transparent backdrop-blur-sm"
+                    from-gray-900/90 to-transparent backdrop-blur-sm"
       >
         <input
           type="text"
@@ -29,10 +33,11 @@ export default function ProductList({ products, onAdd }) {
                      focus:outline-none focus:ring-2 focus:ring-indigo-600"
         />
       </div>
+
+      {/* ───────── 商品グリッド ───────── */}
       <div
         className="grid gap-6 pr-1 mt-2 sm:grid-cols-2 md:grid-cols-3 lg:pr-4
-                   overflow-y-auto"
-        style={{ maxHeight: "calc(100vh / 2)" }}
+                   overflow-y-auto flex-1 min-h-0"
       >
         {filtered.map((p) => (
           <ProductCard key={p.id} product={p} onAdd={onAdd} />
