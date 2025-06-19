@@ -1,3 +1,4 @@
+// backend/src/db/init.js
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -11,7 +12,7 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 const db = new Database(dbPath);
 
-// テーブル作成
+// テーブル作成（なければ自動生成）
 db.exec(`
   CREATE TABLE IF NOT EXISTS members (
     id   INTEGER PRIMARY KEY,
@@ -30,6 +31,17 @@ db.exec(`
     member_id  INTEGER,
     product_id INTEGER,
     timestamp  TEXT
+  );
+  -- 仕入れ履歴テーブルを追加
+  CREATE TABLE IF NOT EXISTS restock_history (
+    id           INTEGER PRIMARY KEY,
+    product_id   INTEGER NOT NULL,
+    product_name TEXT    NOT NULL,
+    barcode      TEXT    NOT NULL,
+    unit_price   INTEGER NOT NULL,
+    quantity     INTEGER NOT NULL,
+    subtotal     INTEGER NOT NULL,
+    timestamp    TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
   );
 `);
 
