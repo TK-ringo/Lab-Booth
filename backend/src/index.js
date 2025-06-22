@@ -6,6 +6,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import adminAuth from "./adminAuth.js";
+import parseOrderItems from "./parseOrderItems.js"; // ←★★ 追加 ★★
 
 dotenv.config();
 const app = express();
@@ -29,7 +30,7 @@ const upload = multer({
 app.use("/api/uploads", express.static(uploadDir));
 /* ================================= */
 
-/* ---------- 一般利用 API ---------- */
+/* ───────── 一般利用 API ───────── */
 app.get("/api/members", (_req, res) => {
   try {
     const members = db.prepare("SELECT * FROM members").all();
@@ -105,10 +106,9 @@ app.use((err, _req, res, next) => {
 
 /* ======== 🔐 管理者 API ======== */
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
-
-// 共通前置ミドルウェア
 app.use("/api/admin", adminAuth);
 
+/* ------ 共通 CRUD ------ */
 app.get("/api/admin/:table", (req, res) => {
   try {
     const { table } = req.params;
@@ -167,7 +167,63 @@ app.delete("/api/admin/:table/:id", (req, res) => {
     res.status(500).json({ error: "削除失敗" });
   }
 });
-/* ================================ */
+
+/* ------ 仕入れ登録エンドポイント ------ */
+app.post("/api/admin/restock/import", (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: "text が空です" });
+
+  const items = parseOrderItems(text); // ← ここで正常に呼び出せるように！
+  if (items.length === 0)
+    return res.status(400).json({ error: "商品が抽出できませんでした" });
+
+  const findProduct = db.prepare("SELECT id FROM products WHERE barcode = ?");
+  const insertProduct = db.prepare(`
+    INSERT INTO products (name, price, stock, barcode)
+    VALUES (?, ?, ?, ?)
+  `);
+  const updateProduct = db.prepare(
+    "UPDATE products SET price = ?, stock = stock + ? WHERE id = ?"
+  );
+  const insertRestock = db.prepare(`
+    INSERT INTO restock_history
+      (product_id, product_name, barcode, unit_price, quantity, subtotal)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  db.transaction(() => {
+    items.forEach((it) => {
+      // products テーブルを検索／更新／挿入
+      let prod = findProduct.get(it.barcode);
+      let productId;
+      if (prod) {
+        updateProduct.run(it.price, it.quantity, prod.id);
+        productId = prod.id;
+      } else {
+        const info = insertProduct.run(
+          it.product_name,
+          it.price,
+          it.quantity,
+          it.barcode
+        );
+        productId = info.lastInsertRowid;
+      }
+
+      // restock_history へ追加
+      insertRestock.run(
+        productId,
+        it.product_name,
+        it.barcode,
+        it.unit_price,
+        it.quantity,
+        it.subtotal
+      );
+    });
+  })();
+
+  res.json({ ok: true, imported: items.length });
+});
+/* ================================= */
 
 /* サーバ起動 */
 const PORT = process.env.PORT || 3001;
