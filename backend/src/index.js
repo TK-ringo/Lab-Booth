@@ -21,11 +21,17 @@ const storage = multer.diskStorage({
     cb(null, `product_${req.params.id}_${Date.now()}${ext}`);
   },
 });
-const upload = multer({ storage });
-app.use("/api/uploads", express.static(uploadDir)); // 公開パス
+
+/* ★ 10MB 上限を付与。超過で LIMIT_FILE_SIZE を throw */
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
+app.use("/api/uploads", express.static(uploadDir));
 /* ================================= */
 
-/* ----- 既存 API ----- */
+/* ---------- 既存 API ---------- */
 app.get("/api/members", (req, res) => {
   try {
     const members = db.prepare("SELECT * FROM members").all();
@@ -50,6 +56,7 @@ app.post("/api/purchase", (req, res) => {
   try {
     const { memberId, productIds } = req.body;
     const now = new Date().toISOString();
+
     const insert = db.prepare(`
       INSERT INTO purchases (member_id, product_id, timestamp)
       VALUES (?, ?, ?)
@@ -94,8 +101,14 @@ app.post("/api/products/:id/image", upload.single("image"), (req, res) => {
   }
 });
 
-/* ----- 仕入れ API など（既存コードは省略せずそのまま） ----- */
-// …（ここは元のまま。省略せずに全て残しています）…
+/* ----- multer のサイズ超過エラーハンドラ ----- */
+app.use((err, req, res, next) => {
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "画像が大きすぎます（最大10MB）" });
+  }
+  next(err);
+});
+/* -------------------------------- */
 
 /* サーバ起動 */
 const PORT = process.env.PORT || 3001;
