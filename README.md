@@ -1,4 +1,4 @@
-# 🎉 Lab Booth README.txt
+# 🎉 Lab Booth のリポジトリへようこそ
 
 ## 🌟 概要
 
@@ -14,7 +14,7 @@ Lab Booth は **React + Vite + Tailwind CSS** 製のフロントエンドと **E
 1. **リポジトリをクローン**
 
    ```bash
-   git clone https://github.com/TK-ringo/ISELab-store.git
+   git clone https://github.com/TK-ringo/Lab-Booth.git
    cd lab-booth
    ```
 
