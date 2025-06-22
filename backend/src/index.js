@@ -168,32 +168,32 @@ app.delete("/api/admin/:table/:id", (req, res) => {
   }
 });
 
-/* ------ 仕入れ登録エンドポイント ------ */
+/* ---- 仕入れ登録エンドポイント ---- */
 app.post("/api/admin/restock/import", (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: "text が空です" });
 
-  const items = parseOrderItems(text); // ← ここで正常に呼び出せるように！
+  const items = parseOrderItems(text);
   if (items.length === 0)
     return res.status(400).json({ error: "商品が抽出できませんでした" });
 
   const findProduct = db.prepare("SELECT id FROM products WHERE barcode = ?");
   const insertProduct = db.prepare(`
-    INSERT INTO products (name, price, stock, barcode)
-    VALUES (?, ?, ?, ?)
+      INSERT INTO products (name, price, stock, barcode)
+      VALUES (?, ?, ?, ?)
   `);
   const updateProduct = db.prepare(
     "UPDATE products SET price = ?, stock = stock + ? WHERE id = ?"
   );
   const insertRestock = db.prepare(`
-    INSERT INTO restock_history
-      (product_id, product_name, barcode, unit_price, quantity, subtotal)
-    VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO restock_history
+        (product_id, product_name, barcode, unit_price, price, quantity, subtotal)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   db.transaction(() => {
     items.forEach((it) => {
-      // products テーブルを検索／更新／挿入
+      /* 1. products テーブル */
       let prod = findProduct.get(it.barcode);
       let productId;
       if (prod) {
@@ -209,12 +209,13 @@ app.post("/api/admin/restock/import", (req, res) => {
         productId = info.lastInsertRowid;
       }
 
-      // restock_history へ追加
+      /* 2. restock_history へ挿入 */
       insertRestock.run(
         productId,
         it.product_name,
         it.barcode,
         it.unit_price,
+        it.price,
         it.quantity,
         it.subtotal
       );

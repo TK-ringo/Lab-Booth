@@ -12,12 +12,13 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 const db = new Database(dbPath);
 
-// テーブル作成（なければ自動生成）
+/* ───────── テーブル作成 ───────── */
 db.exec(`
   CREATE TABLE IF NOT EXISTS members (
     id   INTEGER PRIMARY KEY,
     name TEXT NOT NULL
   );
+
   CREATE TABLE IF NOT EXISTS products (
     id      INTEGER PRIMARY KEY,
     name    TEXT,
@@ -26,37 +27,40 @@ db.exec(`
     barcode TEXT UNIQUE,
     image   TEXT
   );
+
   CREATE TABLE IF NOT EXISTS purchases (
     id         INTEGER PRIMARY KEY,
     member_id  INTEGER,
     product_id INTEGER,
     timestamp  TEXT
   );
-  -- 仕入れ履歴テーブルを追加
+
+  -- restock_history（price 列を含む完全版）
   CREATE TABLE IF NOT EXISTS restock_history (
     id           INTEGER PRIMARY KEY,
     product_id   INTEGER NOT NULL,
     product_name TEXT    NOT NULL,
     barcode      TEXT    NOT NULL,
     unit_price   INTEGER NOT NULL,
+    price        INTEGER NOT NULL,
     quantity     INTEGER NOT NULL,
     subtotal     INTEGER NOT NULL,
     timestamp    TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
   );
 `);
 
-// // サンプルデータ投入（初回のみ）
-// const count = db.prepare("SELECT COUNT(*) as cnt FROM members").get().cnt;
-// if (count === 0) {
-//   const insertMember = db.prepare("INSERT INTO members (name) VALUES (?)");
-//   ["Alice", "Bob", "Carol"].forEach((name) => insertMember.run(name));
+/* ───────── 既存 DB に price 列が無い場合は追加 ───────── */
+try {
+  const colExists = db
+    .prepare("PRAGMA table_info(restock_history)")
+    .all()
+    .some((c) => c.name === "price");
 
-//   const insertProduct = db.prepare(`
-//     INSERT INTO products (name, price, stock, barcode, image)
-//     VALUES (?, ?, ?, ?, ?)
-//   `);
-//   insertProduct.run("Notebook", 200, 10, "9784798063546", "/img/notebook.jpg");
-//   insertProduct.run("Pen", 100, 20, "0987654321", "/img/pen.png");
-// }
+  if (!colExists) {
+    db.exec("ALTER TABLE restock_history ADD COLUMN price INTEGER");
+  }
+} catch (e) {
+  console.error("⚠️ price 列の追加に失敗しました:", e.message);
+}
 
 export default db;
