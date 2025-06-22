@@ -1,6 +1,7 @@
 /* src/index.css */
 @import "tailwindcss";
 
+/* 既存 -------------------------------------------------- */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -13,4 +14,17 @@
 }
 .animate-fade-in {
   animation: fade-in 0.4s ease-out both;
+}
+
+/* ★ 追加 ─ マーキー用アニメーション --------------------- */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  80% {
+    transform: translateX(calc(-1 * var(--distance)));
+  }
+  100% {
+    transform: translateX(0);
+  }
 }

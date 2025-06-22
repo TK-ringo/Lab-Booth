@@ -1,6 +1,7 @@
 // frontend/src/components/ProductCard.jsx
 import { useRef, useState } from "react";
 import { uploadProductImage } from "../api";
+import MarqueeText from "./MarqueeText"; // ★ 追加
 
 export default function ProductCard({ product, onAdd, onImageUpload }) {
   const fileRef = useRef(null);
@@ -16,7 +17,7 @@ export default function ProductCard({ product, onAdd, onImageUpload }) {
     try {
       const updated = await uploadProductImage(product.id, file);
       onImageUpload(updated);
-      setImgError(false); // 新しい画像が入ったのでエラーフラグを戻す
+      setImgError(false);
     } catch (err) {
       console.error(err);
       alert("画像のアップロードに失敗しました😢");
@@ -70,8 +71,9 @@ export default function ProductCard({ product, onAdd, onImageUpload }) {
 
       {/* 商品名・価格・在庫表示 */}
       <div className="flex-1">
-        <h3 className="text-lg font-semibold leading-snug line-clamp-2">
-          {product.name}
+        <h3 className="text-lg font-semibold leading-snug">
+          {/* ★ ここを MarqueeText で包む */}
+          <MarqueeText>{product.name}</MarqueeText>
         </h3>
         <p className="text-sm text-gray-400">{product.price}円</p>
         <p className="text-sm text-gray-400">残量: {product.stock}</p>
