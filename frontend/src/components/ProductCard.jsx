@@ -2,15 +2,18 @@
 export default function ProductCard({ product, onAdd }) {
   return (
     <div
-      className="group relative overflow-hidden rounded-3xl bg-gray-800/50
-                   backdrop-blur-md shadow-glass p-4 flex flex-col gap-3
-                   hover:scale-[1.03] transition"
+      className="h-80 group relative overflow-hidden rounded-3xl bg-gray-800/50
+                 backdrop-blur-md shadow-glass p-4 flex flex-col gap-3
+                 hover:scale-[1.03] transition"
     >
+      {/* 画像は高さ 160px に固定し、幅いっぱいに表示 */}
       <img
         src={product.image}
         alt={product.name}
-        className="aspect-square object-cover rounded-2xl"
+        className="w-full h-40 object-cover rounded-2xl"
       />
+
+      {/* 商品名・価格・在庫表示エリア */}
       <div className="flex-1">
         <h3 className="text-lg font-semibold leading-snug line-clamp-2">
           {product.name}
@@ -18,6 +21,8 @@ export default function ProductCard({ product, onAdd }) {
         <p className="text-sm text-gray-400">{product.price}円</p>
         <p className="text-sm text-gray-400">残量: {product.stock}</p>
       </div>
+
+      {/* 追加ボタン */}
       <button
         onClick={() => onAdd(product)}
         disabled={product.stock <= 0}

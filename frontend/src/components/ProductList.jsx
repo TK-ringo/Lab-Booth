@@ -14,11 +14,7 @@ export default function ProductList({ products, onAdd }) {
   );
 
   return (
-    /* ←───────────────────────────────→
-       高さ可変の子を抱える親なので min-h-0 を追加！
-    */
     <div className="flex flex-col w-full lg:w-2/3 min-h-0">
-      {/* ── 検索ボックス（高さ固定・sticky） ── */}
       <div
         className="sticky top-0 z-10 pb-4 bg-gradient-to-b
                     from-gray-900/90 to-transparent backdrop-blur-sm"
@@ -34,10 +30,11 @@ export default function ProductList({ products, onAdd }) {
         />
       </div>
 
-      {/* ───────── 商品グリッド ───────── */}
+      {/* 商品カードは最大 2 行まで表示し、それ以外はスクロール */}
       <div
         className="grid gap-6 pr-1 mt-2 sm:grid-cols-2 md:grid-cols-3 lg:pr-4
-                   overflow-y-auto flex-1 min-h-0"
+                   overflow-y-auto flex-1 min-h-0
+                   max-h-[41.5rem]"
       >
         {filtered.map((p) => (
           <ProductCard key={p.id} product={p} onAdd={onAdd} />
