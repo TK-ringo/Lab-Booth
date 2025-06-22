@@ -1,106 +1,74 @@
-## 🌟 Lab Booth アプリケーション概要
+# 🎉 Lab Booth — 研究室向け購買管理アプリ
 
-本リポジトリは、研究室用の簡易購買管理システム「Lab Booth」を構築するためのモノレポ構成です。
-フロントエンドとバックエンドをそれぞれコンテナ化し、Docker Compose で一括して起動できるようになっています ✨
+## 🌟 概要
 
-## 📂 ディレクトリ構成
+Lab Booth は **React + Vite + Tailwind CSS** 製フロントエンドと **Express + better-sqlite3** 製バックエンドから成るモノレポ構成のアプリケーションです。  
+Docker Compose でワンコマンド起動できるため、面倒な環境構築を気にせず “研究室の無人売店” をすぐに立ち上げられます。
 
-リポジトリ直下には主に以下のディレクトリ・ファイルがあります。
-`frontend` と `backend` に加え、Docker 関連の設定ファイルや.gitignore も配置しています
+## 🚀 クイックスタート
 
-## 🚀 動作環境・前提条件
+1. リポジトリをクローンします  
+   `git clone https://github.com/<YOUR-ORG>/lab-booth.git && cd lab-booth`
 
-- Docker（バージョン 20.10 以上推奨）🐳
-- Docker Compose（バージョン 1.29 以上推奨）
-- Node.js（開発時のみ。Docker ビルド内で自動インストールされます）
+2. **backend/.env** を手元で新規作成します
 
-お使いのマシンに Docker と Docker Compose がインストールされていれば、その他のセットアップは不要です 🎉
-
-## 🏗️ インストール＆起動手順
-
-1. リポジトリをクローン
-
-   ```bash
-   git clone [https://github.com/your-org/lab-booth.git](https://github.com/your-org/lab-booth.git)
-   cd lab-booth
-   ```
-
-2. Docker Compose で一括起動
-
-   ```bash
-   docker-compose up --build
-   ```
-
-   - バックエンドは `localhost:3001` で起動
-   - フロントエンドは `localhost:3000` で起動
-
-3. ブラウザで `http://localhost:3000` にアクセスして、動作確認を行ってください 🎈
-
-## 🔍 主な機能
-
-### バックエンド（Express + SQLite）
-
-- 会員一覧取得 API：`GET /api/members`
-- 商品一覧取得 API：`GET /api/products`
-- 購入処理 API：`POST /api/purchase`
-
-  - リクエストボディ例
-
-    ```json
-    {
-      "memberId": 1,
-      "productIds": [2, 3]
-    }
-    ```
-
-- better-sqlite3 を用いた軽量 DB 実装&#x20;
-
-### フロントエンド（React + Vite + Tailwind CSS）
-
-- 会員選択ドロップダウン
-- 商品一覧表示＆検索
-- バーコードスキャン入力対応（Enter キーで確定）
-- カート追加・削除・合計金額表示
-- 購入確定ボタンでバックエンド連携
-- Toast による操作フィードバック表示
-
-## ⚙️ 環境変数
-
-バックエンド用の`.env`ファイル（`backend/.env`）に以下を設定してください
-
-```
-PORT=3001
-DATABASE_PATH=./data/shop.db
+```env
+ # 任意のポートに変更可
+ PORT=3001
+ # コンテナ内パス。変更不要
+ DATABASE_PATH=./data/shop.db
 ```
 
-## 📦 Docker 設定
+3. コンテナをビルドして起動します
+   `docker-compose up --build`
 
-- **docker-compose.yml**
+ブラウザで **[http://localhost:3000](http://localhost:3000)** にアクセスすれば準備完了です 🎈
+バックエンド API は **[http://localhost:3001/api/](http://localhost:3001/api/)** で待ち受けています&#x20;
 
-  - `frontend` サービスは Nginx でビルド成果物を配信
-  - `backend` サービスは Node.js コンテナで Express アプリを起動
+## 🏗️ ディレクトリ構成
 
-- **.dockerignore** / **.gitignore**
-
-  - 不要ファイル（`node_modules`, `dist`, `.env`など）を除外設定済み
-
-## 🛠️ 開発モード
-
-ローカルでホットリロードを効かせたい場合は、以下コマンドで両方の開発サーバーを同時起動できます 🛠️
-
-```bash
-npm run dev
+```
+lab-booth/
+├─ backend/         # Express アプリ
+│  ├─ src/          # サーバ本体
+│  └─ data/         # SQLite DB（起動時に自動生成）
+├─ frontend/        # React + Vite SPA
+├─ docker-compose.yml
+└─ README.md
 ```
 
-（`concurrently` が両方の `dev` スクリプトを並列実行します）
+## ⚙️ 開発モード
 
-## 🤝 貢献について
+ローカルでホットリロードを有効にして開発したい場合は
+`npm run dev`
+を実行してください。フロントエンドとバックエンドが同時に起動し、変更を即座に反映します&#x20;
 
-バグ報告や機能追加のプルリクエストは大歓迎です！
-Issue を立ててから進めていただけるとスムーズです 😘
+## 💾 データベースについて
 
-## 📄 ライセンス
+SQLite ファイル（`.db`）は **コンテナ起動時に自動生成** され、ホスト側の `backend/data` ディレクトリへボリュームマウントされます。
+**GitHub にはコミットされない** ため、初回起動後に DB が作られていない場合は権限設定などを確認してください。&#x20;
 
-MIT License
+## 🔐 環境変数 (.env)
 
-Happy Coding！🔧🎉
+`.env` は機密情報を含むため **リポジトリには同梱していません**。必ず各自で準備してください。
+最低限必要なのは `PORT` と `DATABASE_PATH` だけです。
+
+## 🖼️ 画像アップロード
+
+- 商品カードの画像をクリックするとファイル選択ダイアログが開き、画像を変更できます
+- 1 画像あたりの上限サイズは **10 MB** です（バックエンドで制限）
+- Nginx 側では **20 MB** までリクエストを許可しています&#x20;
+
+## 🛠️ カスタマイズのヒント
+
+- **フロントエンド**: `frontend/src/components/` を編集して UI/UX を自由に拡張できます
+- **バックエンド** : API を追加したい場合は `backend/src/index.js` にルートを追記し、必要に応じて `db/init.js` でテーブル定義を更新してください
+
+## 🤝 コントリビュート
+
+バグ報告・機能提案は Issue でお気軽にお知らせください。
+プルリクエストも大歓迎です 🧑‍💻✨
+
+## 📜 ライセンス
+
+本リポジトリは **MIT License** で公開しています。詳しくは `LICENSE` をご覧ください。
