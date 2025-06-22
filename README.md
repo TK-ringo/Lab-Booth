@@ -1,74 +1,93 @@
-# 🎉 Lab Booth — 研究室向け購買管理アプリ
+# 🎉 Lab Booth README.txt
 
 ## 🌟 概要
 
-Lab Booth は **React + Vite + Tailwind CSS** 製フロントエンドと **Express + better-sqlite3** 製バックエンドから成るモノレポ構成のアプリケーションです。  
-Docker Compose でワンコマンド起動できるため、面倒な環境構築を気にせず “研究室の無人売店” をすぐに立ち上げられます。
+Lab Booth は **React + Vite + Tailwind CSS** 製のフロントエンドと **Express + better-sqlite3** 製のバックエンドから成る “研究室向け購買管理アプリ” です。Docker Compose で一発起動できるので、複雑なセットアップなしに “無人売店” をサクッと立ち上げられます 🏪✨
 
-## 🚀 クイックスタート
+## 🚀 必要条件
 
-1. リポジトリをクローンします  
-   `git clone https://github.com/<YOUR-ORG>/lab-booth.git && cd lab-booth`
+1. **Docker** と **Docker Compose** が動く環境 🐳
+2. ポート `3000`（フロント）と `3001`（バックエンド）が空いていること 🔌
 
-2. **backend/.env** を手元で新規作成します
+## ⚙️ クイックスタート
 
-```env
- # 任意のポートに変更可
- PORT=3001
- # コンテナ内パス。変更不要
- DATABASE_PATH=./data/shop.db
-```
+1. **リポジトリをクローン**
 
-3. コンテナをビルドして起動します
-   `docker-compose up --build`
+   ```bash
+   git clone https://github.com/<YOUR-ORG>/lab-booth.git
+   cd lab-booth
+   ```
 
-ブラウザで **[http://localhost:3000](http://localhost:3000)** にアクセスすれば準備完了です 🎈
-バックエンド API は **[http://localhost:3001/api/](http://localhost:3001/api/)** で待ち受けています&#x20;
+2. **backend/.env を用意**
 
-## 🏗️ ディレクトリ構成
+   ```
+   PORT=3001
+   DATABASE_PATH=./data/shop.db
+   ADMIN_PASSWORD=your-strong-password
+   ```
+
+3. **コンテナをビルドして起動**
+
+   ```bash
+   docker-compose up --build
+   ```
+
+4. ブラウザで [http://localhost:3000](http://localhost:3000) を開けば完了 🎈
+
+## 🗂️ ディレクトリ構成
 
 ```
 lab-booth/
-├─ backend/         # Express アプリ
-│  ├─ src/          # サーバ本体
-│  └─ data/         # SQLite DB（起動時に自動生成）
-├─ frontend/        # React + Vite SPA
+├─ backend/        ← Express API & SQLite
+│  ├─ src/
+│  └─ data/        (起動時に自動生成・Git 管理外)
+├─ frontend/       ← React + Vite SPA
 ├─ docker-compose.yml
-└─ README.md
+└─ README.txt      ← ★ コレ！
 ```
 
-## ⚙️ 開発モード
+## 🔐 非公開ファイルと .gitignore
 
-ローカルでホットリロードを有効にして開発したい場合は
-`npm run dev`
-を実行してください。フロントエンドとバックエンドが同時に起動し、変更を即座に反映します&#x20;
+- **`.env`** : パスワードやポート設定を含むため **リポジトリには入れません** 🛡️
+- **`backend/data/`** : SQLite データベース。コンテナ起動時に生成され、ホスト側にボリュームマウントされます 📂
+- **`backend/uploads/`** : 商品画像の保存先。こちらもボリュームで永続化されます 🖼️
+- **`node_modules/` / `dist/` / `*.log`** などの生成物も Git には含まれません 🚫
 
-## 💾 データベースについて
+これらは `.gitignore` で除外されていますので、GitHub 上には存在しません。クローン直後は空ディレクトリ、または存在しない状態が正しい挙動です 💡
 
-SQLite ファイル（`.db`）は **コンテナ起動時に自動生成** され、ホスト側の `backend/data` ディレクトリへボリュームマウントされます。
-**GitHub にはコミットされない** ため、初回起動後に DB が作られていない場合は権限設定などを確認してください。&#x20;
+## 💾 データベースと画像の永続化
 
-## 🔐 環境変数 (.env)
+初回起動後に **backend/data/shop.db** と **backend/uploads/** が自動生成されます。
+ホスト側にマウントされるため、コンテナを再ビルドしてもデータと画像は失われません 🤩
 
-`.env` は機密情報を含むため **リポジトリには同梱していません**。必ず各自で準備してください。
-最低限必要なのは `PORT` と `DATABASE_PATH` だけです。
+## 🛠️ 開発モード
 
-## 🖼️ 画像アップロード
+ローカルでホットリロードを有効にしたい場合は、次のコマンドでフロントエンドとバックエンドを同時起動できます。
 
-- 商品カードの画像をクリックするとファイル選択ダイアログが開き、画像を変更できます
-- 1 画像あたりの上限サイズは **10 MB** です（バックエンドで制限）
-- Nginx 側では **20 MB** までリクエストを許可しています&#x20;
+```bash
+npm run dev
+```
 
-## 🛠️ カスタマイズのヒント
+コードを保存すると即座にブラウザへ反映 🔄✨
 
-- **フロントエンド**: `frontend/src/components/` を編集して UI/UX を自由に拡張できます
-- **バックエンド** : API を追加したい場合は `backend/src/index.js` にルートを追記し、必要に応じて `db/init.js` でテーブル定義を更新してください
+## 📮 管理者ページ
+
+- URL: `/admin`
+- 認証: **Basic 認証** または **`x-admin-pass` ヘッダー**
+- パスワードは `.env` の `ADMIN_PASSWORD` で設定します 🔑
+
+## 🎨 画像アップロード
+
+商品カード右下の ✏️ アイコンから画像を変更できます。
+1 ファイルあたり **10 MB** までアップロード可能です（Nginx 側で 20 MB まで許可）。
 
 ## 🤝 コントリビュート
 
-バグ報告・機能提案は Issue でお気軽にお知らせください。
-プルリクエストも大歓迎です 🧑‍💻✨
+バグ報告や機能提案、大歓迎です！
+Issue や Pull Request でお気軽にご連絡ください 🧑‍💻💬
 
 ## 📜 ライセンス
 
-本リポジトリは **MIT License** で公開しています。詳しくは `LICENSE` をご覧ください。
+本プロジェクトは **MIT License** です。詳細は `LICENSE` をご確認ください 📄✨
+
+✨ 以上で README は終わりです。Lab Booth を楽しんでください 🎉
