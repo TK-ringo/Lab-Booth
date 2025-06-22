@@ -19,5 +19,17 @@ export async function postPurchase({ memberId, productIds }) {
     body: JSON.stringify({ memberId, productIds }),
   });
   if (!res.ok) throw new Error("購入処理に失敗しました");
-  return await res.json(); // { members, products }
+  return await res.json();
+}
+
+/* 画像アップロード用 🖼️ */
+export async function uploadProductImage(productId, file) {
+  const form = new FormData();
+  form.append("image", file);
+  const res = await fetch(`${BASE}/products/${productId}/image`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error("画像アップロードに失敗しました");
+  return (await res.json()).product;
 }

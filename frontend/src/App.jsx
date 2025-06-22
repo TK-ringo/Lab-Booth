@@ -15,7 +15,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
 
-  // 初期データ取得
+  /* 初期データ取得 */
   useEffect(() => {
     (async () => {
       try {
@@ -31,7 +31,7 @@ export default function App() {
     })();
   }, []);
 
-  // カートに追加＋在庫デクリメント
+  /* カート追加 */
   const addProduct = useCallback((product) => {
     setCart((c) => [...c, product]);
     setProducts((ps) =>
@@ -40,7 +40,7 @@ export default function App() {
     setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
   }, []);
 
-  // カートから削除＋在庫インクリメント
+  /* カート削除 */
   const removeProduct = useCallback((index) => {
     setCart((c) => {
       const removed = c[index];
@@ -51,7 +51,15 @@ export default function App() {
     });
   }, []);
 
-  // 確定ボタン押下時
+  /* 画像アップロード後の更新 */
+  const handleImageUpload = useCallback((updatedProduct) => {
+    setProducts((ps) =>
+      ps.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+    setToast({ msg: "画像を更新しました🖼️", type: "success" });
+  }, []);
+
+  /* 購入確定 */
   const handleConfirm = async () => {
     if (!currentMember) {
       setToast({ msg: "名前を選択してください", type: "info" });
@@ -76,7 +84,7 @@ export default function App() {
     }
   };
 
-  // バーコード読み取り時
+  /* バーコードスキャン */
   const handleScan = useCallback(
     (code) => {
       const found = products.find((p) => p.barcode === code && p.stock > 0);
@@ -91,8 +99,6 @@ export default function App() {
     },
     [products, addProduct]
   );
-
-  // フォーカスしていないときのみスキャン有効
   useBarcodeScanner(handleScan);
 
   if (isLoading) {
@@ -122,7 +128,11 @@ export default function App() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-12">
-        <ProductList products={products} onAdd={addProduct} />
+        <ProductList
+          products={products}
+          onAdd={addProduct}
+          onImageUpload={handleImageUpload}
+        />
         <CartList
           cart={cart}
           onRemove={removeProduct}

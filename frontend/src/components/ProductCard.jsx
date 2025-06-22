@@ -1,19 +1,51 @@
 // src/components/ProductCard.jsx
-export default function ProductCard({ product, onAdd }) {
+import { useRef } from "react";
+import { uploadProductImage } from "../api";
+
+export default function ProductCard({ product, onAdd, onImageUpload }) {
+  const fileRef = useRef(null);
+
+  /* 画像クリックで input:file を開く */
+  const handleImageClick = () => {
+    fileRef.current?.click();
+  };
+
+  /* ファイル選択後にアップロード */
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const updated = await uploadProductImage(product.id, file);
+      onImageUpload(updated);
+    } catch (err) {
+      console.error(err);
+      alert("画像のアップロードに失敗しました😢");
+    }
+  };
+
   return (
     <div
       className="h-80 group relative overflow-hidden rounded-3xl bg-gray-800/50
                  backdrop-blur-md shadow-glass p-4 flex flex-col gap-3
                  hover:scale-[1.03] transition"
     >
-      {/* 画像は高さ 160px に固定し、幅いっぱいに表示 */}
+      {/* 画像はクリック可能に */}
       <img
         src={product.image}
         alt={product.name}
-        className="w-full h-40 object-cover rounded-2xl"
+        title="クリックして画像を変更"
+        className="w-full h-40 object-cover rounded-2xl cursor-pointer"
+        onClick={handleImageClick}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileRef}
+        onChange={handleFileChange}
+        className="hidden"
       />
 
-      {/* 商品名・価格・在庫表示エリア */}
+      {/* 商品名・価格・在庫 */}
       <div className="flex-1">
         <h3 className="text-lg font-semibold leading-snug line-clamp-2">
           {product.name}
