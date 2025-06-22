@@ -64,12 +64,8 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
   };
 
   /* ───────── 新規行追加 ───────── */
-  const addRow = () => {
-    setNewRows((r) => [
-      ...r,
-      { __tempId: Date.now() /* 必要なら初期値を入れる */ },
-    ]);
-  };
+  const addRow = () =>
+    setNewRows((r) => [...r, { __tempId: Date.now() /* 初期値 */ }]);
 
   /* ───────── コミット処理 ───────── */
   useImperativeHandle(ref, () => ({
@@ -105,7 +101,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
         });
       }
       alert("👌 反映しました！（自動リロードします）");
-      window.location.reload(); // ★ ここでページをリロード
+      window.location.reload(); // 🔄 自動でページを更新
     },
   }));
 
@@ -117,8 +113,9 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
     : [];
 
   return (
-    <div className="overflow-auto">
-      {/* ソート切替 */}
+    // ★ 15 行相当で高さを固定し、あふれた分はスクロール
+    <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
+      {/* ソート切替ボタン */}
       <button
         onClick={() => setOrder(order === "asc" ? "desc" : "asc")}
         className="mb-2 px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600"
@@ -128,14 +125,14 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
 
       {/* データテーブル */}
       <table className="min-w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-800">
+        <thead className="sticky top-0 bg-gray-800 z-10">
+          <tr>
             {columns.map((c) => (
               <th key={c} className="px-3 py-2 text-left font-semibold">
                 {c}
               </th>
             ))}
-            <th className="px-3 py-2"></th>
+            <th className="px-3 py-2" />
           </tr>
         </thead>
         <tbody>
@@ -177,7 +174,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
             );
           })}
 
-          {/* 新規行描画 */}
+          {/* ── 新規行描画 ── */}
           {newRows.map((row, idx) => (
             <tr key={row.__tempId} className="bg-emerald-900/30">
               {columns.map((col) => (
