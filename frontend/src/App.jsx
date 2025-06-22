@@ -15,7 +15,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
 
-  /* 初期データ取得 */
+  /* ────── 初期データ取得 ────── */
   useEffect(() => {
     (async () => {
       try {
@@ -31,7 +31,7 @@ export default function App() {
     })();
   }, []);
 
-  /* カート追加 */
+  /* ────── カート追加 ────── */
   const addProduct = useCallback((product) => {
     setCart((c) => [...c, product]);
     setProducts((ps) =>
@@ -40,7 +40,7 @@ export default function App() {
     setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
   }, []);
 
-  /* カート削除 */
+  /* ────── カート削除 ────── */
   const removeProduct = useCallback((index) => {
     setCart((c) => {
       const removed = c[index];
@@ -51,7 +51,7 @@ export default function App() {
     });
   }, []);
 
-  /* 画像アップロード後の更新 */
+  /* ────── 画像アップロード後の更新 ────── */
   const handleImageUpload = useCallback((updatedProduct) => {
     setProducts((ps) =>
       ps.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
@@ -59,7 +59,7 @@ export default function App() {
     setToast({ msg: "画像を更新しました🖼️", type: "success" });
   }, []);
 
-  /* 購入確定 */
+  /* ────── 購入確定 ────── */
   const handleConfirm = async () => {
     if (!currentMember) {
       setToast({ msg: "名前を選択してください", type: "info" });
@@ -84,23 +84,37 @@ export default function App() {
     }
   };
 
-  /* バーコードスキャン */
+  /* ────── バーコードスキャン ────── */
   const handleScan = useCallback(
     (code) => {
-      const found = products.find((p) => p.barcode === code && p.stock > 0);
-      if (found) {
-        addProduct(found);
-      } else {
+      // ① 登録商品かどうか確認
+      const product = products.find((p) => p.barcode === code);
+
+      if (!product) {
         setToast({
-          msg: "読み取りエラー：もう一度読み取ってください。",
+          msg: "読み取りエラー：登録されていない商品です😢",
           type: "error",
         });
+        return;
       }
+
+      // ② 売り切れチェック
+      if (product.stock <= 0) {
+        setToast({
+          msg: `残念！「${product.name}」は売り切れです🍂`,
+          type: "error",
+        });
+        return;
+      }
+
+      // ③ 在庫あり → カートへ追加
+      addProduct(product);
     },
     [products, addProduct]
   );
   useBarcodeScanner(handleScan);
 
+  /* ────── ローディング表示 ────── */
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center text-xl">
@@ -109,8 +123,10 @@ export default function App() {
     );
   }
 
+  /* ────── 画面描画 ────── */
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
+      {/* タイトル */}
       <h1
         className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
                      bg-clip-text text-transparent bg-gradient-to-r
@@ -119,6 +135,7 @@ export default function App() {
         Lab Booth
       </h1>
 
+      {/* 名前選択 */}
       <div className="flex justify-center">
         <NameSelector
           members={members}
@@ -127,6 +144,7 @@ export default function App() {
         />
       </div>
 
+      {/* 商品一覧 & カート */}
       <div className="flex flex-col lg:flex-row gap-12">
         <ProductList
           products={products}
@@ -140,6 +158,7 @@ export default function App() {
         />
       </div>
 
+      {/* トースト通知 */}
       {toast && (
         <Toast
           message={toast.msg}
