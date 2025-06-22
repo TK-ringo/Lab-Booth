@@ -17,21 +17,24 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
   const [deleted, setDeleted] = useState(new Set());
   const [newRows, setNewRows] = useState([]);
 
-  /* データ取得（初ロード or ソート変更） */
+  /* ───────── データ取得 ───────── */
+  async function fetchRows(ord = order) {
+    const res = await fetch(`${BASE}/${table}?order=${ord}`, {
+      headers: { "x-admin-pass": password },
+    });
+    const { rows } = await res.json();
+    setRows(rows.map(editableCopy));
+    setDirty({});
+    setDeleted(new Set());
+    setNewRows([]);
+  }
+
   useEffect(() => {
-    (async () => {
-      const res = await fetch(`${BASE}/${table}?order=${order}`, {
-        headers: { "x-admin-pass": password },
-      });
-      const { rows } = await res.json();
-      setRows(rows.map(editableCopy));
-      setDirty({});
-      setDeleted(new Set());
-      setNewRows([]);
-    })();
+    if (table) fetchRows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, order, password]);
 
-  /* 各セル変更 */
+  /* ───────── セル編集 ───────── */
   const handleChange = (idx, key, value, isNew = false) => {
     if (isNew) {
       setNewRows((r) => {
@@ -51,7 +54,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
     }
   };
 
-  /* 行削除（トグル） */
+  /* ───────── 行削除トグル ───────── */
   const toggleDelete = (id) => {
     setDeleted((set) => {
       const cp = new Set(set);
@@ -60,15 +63,15 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
     });
   };
 
-  /* 新規行追加 */
+  /* ───────── 新規行追加 ───────── */
   const addRow = () => {
     setNewRows((r) => [
       ...r,
-      { __tempId: Date.now() /* ここに必要なら初期値 */ },
+      { __tempId: Date.now() /* 必要なら初期値を入れる */ },
     ]);
   };
 
-  /* ---------- コミット処理 (親から呼び出し) ---------- */
+  /* ───────── コミット処理 ───────── */
   useImperativeHandle(ref, () => ({
     async commit() {
       // 削除
@@ -101,14 +104,12 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
           body: JSON.stringify(body),
         });
       }
-      alert("👌 反映しました！");
-      // 最新データ再読込
-      setOrder((o) => (o === "asc" ? "desc" : "asc")); // トグルして refetch
-      setOrder((o) => (o === "asc" ? "desc" : "asc"));
+      alert("👌 反映しました！（自動リロードします）");
+      window.location.reload(); // ★ ここでページをリロード
     },
   }));
 
-  /* ---------- 描画 ---------- */
+  /* ───────── 描画 ───────── */
   const columns = rows.length
     ? Object.keys(rows[0])
     : newRows.length
