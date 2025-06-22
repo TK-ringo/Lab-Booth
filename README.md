@@ -43,7 +43,7 @@ lab-booth/
 │  └─ data/        (起動時に自動生成・Git 管理外)
 ├─ frontend/       ← React + Vite SPA
 ├─ docker-compose.yml
-└─ README.txt      ← ★ コレ！
+└─ README.md      ← ★ コレ！
 ```
 
 ## 🔐 非公開ファイルと .gitignore
