@@ -6,7 +6,10 @@ services:
     env_file:
       - ./backend/.env
     volumes:
+      # 📦 DB 永続化
       - ./backend/data:/app/data
+      # 🖼️ 画像永続化（★追加★）
+      - ./backend/uploads:/app/uploads
     ports:
       - "3001:3001"
     restart: unless-stopped
@@ -22,4 +25,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-# ``` :contentReference[oaicite:1]{index=1}
