@@ -6,9 +6,7 @@ services:
     env_file:
       - ./backend/.env
     volumes:
-      # 📦 DB 永続化
       - ./backend/data:/app/data
-      # 🖼️ 画像永続化（★追加★）
       - ./backend/uploads:/app/uploads
     ports:
       - "3001:3001"
@@ -18,10 +16,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "3000:80"
+    env_file:
+      - ./backend/.env # ADMIN_PASSWORD を共有
     environment:
       VITE_API_BASE: "/api"
     depends_on:
       - backend
+    ports:
+      - "3000:80"
     restart: unless-stopped

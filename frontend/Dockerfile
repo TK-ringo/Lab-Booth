@@ -1,24 +1,30 @@
 # frontend/Dockerfile
 
-# 1) ビルド環境
+# ------------- ビルド環境 -------------
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# パッケージ定義だけ先にコピーして依存インストール
 COPY package*.json ./
 RUN npm ci
 
-# 残りソースをコピーしてビルド
 COPY . .
 RUN npm run build
 
-# 2) 実行環境
+# ------------- 実行環境 --------------
 FROM nginx:stable-alpine
-# カスタム nginx 設定を上書き
+
+# htpasswd 生成用
+RUN apk add --no-cache apache2-utils
+
+# Nginx 設定
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# ビルド成果物を公開ディレクトリに配置
+# エントリポイント
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# 公開ファイル
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
