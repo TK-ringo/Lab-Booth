@@ -14,7 +14,7 @@ Lab Booth は **React + Vite + Tailwind CSS** 製のフロントエンドと **E
 1. **リポジトリをクローン**
 
    ```bash
-   git clone https://github.com/<YOUR-ORG>/lab-booth.git
+   git clone https://github.com/TK-ringo/ISELab-store.git
    cd lab-booth
    ```
 
