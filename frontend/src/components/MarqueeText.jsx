@@ -16,7 +16,7 @@ export default function MarqueeText({ children, speed = 50, holdSec = 1 }) {
   const [duration, setDuration] = useState(0); // アニメーション全体の秒数
   const [animName, setAnimName] = useState("");
 
-  /* 幅を測ってスクロール要否を判定 */
+  /* ───── 幅を測ってスクロール要否を判定 ───── */
   useEffect(() => {
     const measure = () => {
       if (!containerRef.current || !textRef.current) return;
@@ -25,7 +25,7 @@ export default function MarqueeText({ children, speed = 50, holdSec = 1 }) {
         textRef.current.scrollWidth - containerRef.current.clientWidth;
       if (diff > 0) {
         const scrollTime = diff / speed; // 実際に動いている時間
-        const totalTime = scrollTime + holdSec * 2; // 停止 2 回ぶん + スクロール
+        const totalTime = scrollTime + holdSec * 2; // 停止 2 回 + スクロール
         setNeedsScroll(true);
         setDistance(diff);
         setDuration(Number(totalTime.toFixed(2)));
@@ -67,12 +67,16 @@ export default function MarqueeText({ children, speed = 50, holdSec = 1 }) {
     <div ref={containerRef} className="overflow-hidden whitespace-nowrap">
       <span
         ref={textRef}
-        className="inline-block"
+        className="inline-block marquee-scroll"
         style={
           needsScroll
             ? {
                 "--distance": `${distance}px`,
-                animation: `${animName} ${duration}s linear infinite`,
+                /* 🚫 animation ショートハンドを使わない！ */
+                animationName: animName,
+                animationDuration: `${duration}s`,
+                animationTimingFunction: "linear",
+                animationIterationCount: "infinite",
               }
             : {}
         }

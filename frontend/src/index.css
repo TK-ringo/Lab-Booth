@@ -28,3 +28,11 @@
     transform: translateX(0);
   }
 }
+
+/* ★ 追加 ─ ホバー時のみ再生 ----------------------------- */
+.group .marquee-scroll {
+  animation-play-state: paused; /* デフォルト停止 */
+}
+.group:hover .marquee-scroll {
+  animation-play-state: running; /* ホバーで再生 */
+}
