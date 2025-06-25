@@ -6,7 +6,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import adminAuth from "./adminAuth.js";
-import parseOrderItems from "./parseOrderItems.js"; // ←★★ 追加 ★★
+import parseOrderItems from "./parseOrderItems.js";
 
 dotenv.config();
 const app = express();
@@ -107,6 +107,22 @@ app.use((err, _req, res, next) => {
 /* ======== 🔐 管理者 API ======== */
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
 app.use("/api/admin", adminAuth);
+
+/* ── 列情報取得 ───────── */
+app.get("/api/admin/:table/columns", (req, res) => {
+  try {
+    const { table } = req.params;
+    if (!VALID_TABLES.includes(table)) return res.status(404).end();
+    const cols = db
+      .prepare(`PRAGMA table_info(${table})`)
+      .all()
+      .map((c) => c.name);
+    res.json({ columns: cols });
+  } catch {
+    res.status(500).json({ error: "列情報の取得に失敗しました" });
+  }
+});
+/* ──────────────────────────── */
 
 /* ------ 共通 CRUD ------ */
 app.get("/api/admin/:table", (req, res) => {

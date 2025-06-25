@@ -1,38 +1,66 @@
 // frontend/src/components/AdminTable.jsx
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 
 const BASE = "/api/admin";
 
+/* 既存: 行オブジェクトを編集用に整形 */
 function editableCopy(row) {
-  // プライマリキー id 以外は文字列化しておく
   const copy = {};
   Object.entries(row).forEach(([k, v]) => (copy[k] = v ?? ""));
   return copy;
 }
 
 const AdminTable = forwardRef(({ table, password }, ref) => {
+  /* ==== 追加 state ==== */
+  const [columns, setColumns] = useState([]);
+  /* =================== */
   const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
-  const [dirty, setDirty] = useState({}); // id -> edited row
+  const [dirty, setDirty] = useState({});
   const [deleted, setDeleted] = useState(new Set());
   const [newRows, setNewRows] = useState([]);
 
-  /* ───────── データ取得 ───────── */
-  async function fetchRows(ord = order) {
-    const res = await fetch(`${BASE}/${table}?order=${ord}`, {
+  /* ───────── 列情報取得 ───────── */
+  const fetchColumns = useCallback(async () => {
+    if (!table) return;
+    const res = await fetch(`${BASE}/${table}/columns`, {
       headers: { "x-admin-pass": password },
     });
-    const { rows } = await res.json();
-    setRows(rows.map(editableCopy));
-    setDirty({});
-    setDeleted(new Set());
-    setNewRows([]);
-  }
+    const { columns } = await res.json();
+    setColumns(columns);
+  }, [table, password]);
+
+  /* ───────── データ取得 ───────── */
+  const fetchRows = useCallback(
+    async (ord = order) => {
+      if (!table) return;
+      const res = await fetch(`${BASE}/${table}?order=${ord}`, {
+        headers: { "x-admin-pass": password },
+      });
+      const { rows } = await res.json();
+      setRows(rows.map(editableCopy));
+      setDirty({});
+      setDeleted(new Set());
+      setNewRows([]);
+      /* rows が空なら schema から列情報取得 */
+      if (rows.length) {
+        setColumns(Object.keys(rows[0]));
+      } else {
+        await fetchColumns();
+      }
+    },
+    [table, order, password, fetchColumns]
+  );
 
   useEffect(() => {
-    if (table) fetchRows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, order, password]);
+    fetchRows();
+  }, [fetchRows]);
 
   /* ───────── セル編集 ───────── */
   const handleChange = (idx, key, value, isNew = false) => {
@@ -64,20 +92,26 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
   };
 
   /* ───────── 新規行追加 ───────── */
-  const addRow = () =>
-    setNewRows((r) => [...r, { __tempId: Date.now() /* 初期値 */ }]);
+  const addRow = () => {
+    /* id は自動採番なので除外して空文字で初期化 */
+    const blank = {};
+    columns.forEach((c) => {
+      if (c !== "id") blank[c] = "";
+    });
+    setNewRows((r) => [...r, { __tempId: Date.now(), ...blank }]);
+  };
 
   /* ───────── コミット処理 ───────── */
   useImperativeHandle(ref, () => ({
     async commit() {
-      // 削除
+      /* 削除 */
       for (const id of deleted) {
         await fetch(`${BASE}/${table}/${id}`, {
           method: "DELETE",
           headers: { "x-admin-pass": password },
         });
       }
-      // 更新
+      /* 更新 */
       for (const row of Object.values(dirty)) {
         await fetch(`${BASE}/${table}/${row.id}`, {
           method: "PUT",
@@ -88,7 +122,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
           body: JSON.stringify(row),
         });
       }
-      // 追加
+      /* 追加 */
       for (const row of newRows) {
         const { __tempId, ...body } = row;
         await fetch(`${BASE}/${table}`, {
@@ -101,19 +135,17 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
         });
       }
       alert("👌 反映しました！（自動リロードします）");
-      window.location.reload(); // 🔄 自動でページを更新
+      window.location.reload();
     },
   }));
 
   /* ───────── 描画 ───────── */
-  const columns = rows.length
-    ? Object.keys(rows[0])
-    : newRows.length
-    ? Object.keys(newRows[0])
-    : [];
+  /* columns state に統一 */
+  if (!columns.length) {
+    return <p className="text-gray-400">列情報を取得中です…</p>;
+  }
 
   return (
-    // ★ 15 行相当で高さを固定し、あふれた分はスクロール
     <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
       {/* ソート切替ボタン */}
       <button
@@ -136,6 +168,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
           </tr>
         </thead>
         <tbody>
+          {/* 既存行 */}
           {rows.map((row, idx) => {
             const isDeleted = deleted.has(row.id);
             return (
@@ -174,7 +207,7 @@ const AdminTable = forwardRef(({ table, password }, ref) => {
             );
           })}
 
-          {/* ── 新規行描画 ── */}
+          {/* 新規行 */}
           {newRows.map((row, idx) => (
             <tr key={row.__tempId} className="bg-emerald-900/30">
               {columns.map((col) => (
