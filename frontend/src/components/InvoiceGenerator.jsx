@@ -11,14 +11,12 @@ export default function InvoiceGenerator({ password }) {
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   );
 
-  /* === メンバー & 清算額 === */
+  /* === メンバー・清算額取得 === */
   const [rows, setRows] = useState([]);
 
-  /* -------- データ取得 -------- */
   useEffect(() => {
     (async () => {
       const [year, month] = ym.split("-").map(Number);
-
       const members = await fetchMembers();
       const res = await fetch(
         `${ADMIN_BASE}/invoice-summary?year=${year}&month=${month}`,
@@ -26,22 +24,22 @@ export default function InvoiceGenerator({ password }) {
       );
       const { rows: settlements } = await res.json();
 
-      /* ⭐ 繰り越し／前払いは文字列で初期化（空文字） */
-      const merged = members.map((m) => {
-        const found = settlements.find((s) => s.member_id === m.id);
-        return {
-          id: m.id,
-          name: m.name,
-          carry: "",
-          settlement: found ? found.settlement : 0,
-          advance: "",
-        };
-      });
-      setRows(merged);
+      setRows(
+        members.map((m) => {
+          const s = settlements.find((x) => x.member_id === m.id);
+          return {
+            id: m.id,
+            name: m.name,
+            carry: "",
+            settlement: s ? s.settlement : 0,
+            advance: "",
+          };
+        })
+      );
     })();
   }, [ym, password]);
 
-  /* -------- 入力ハンドラ -------- */
+  /* === 入力変更 === */
   const handleChange = (idx, key, val) =>
     setRows((rs) => {
       const cp = [...rs];
@@ -49,28 +47,22 @@ export default function InvoiceGenerator({ password }) {
       return cp;
     });
 
-  /* -------- 収支計算 -------- */
-  const toNum = (v) => {
-    const n = Number(v);
-    return isNaN(n) ? 0 : n;
-  };
-
+  /* === 計算 === */
+  const toNum = (v) => (isNaN(Number(v)) ? 0 : Number(v));
   const computedRows = useMemo(
     () =>
       rows.map((r) => {
-        const carry = toNum(r.carry);
-        const advance = toNum(r.advance);
-        const balance = carry + r.settlement - advance;
+        const bal = toNum(r.carry) + r.settlement - toNum(r.advance);
         return {
           ...r,
-          invoice: balance < 0 ? 0 : balance,
-          nextAdvance: balance < 0 ? -balance : 0,
+          invoice: bal < 0 ? 0 : bal,
+          nextAdvance: bal < 0 ? -bal : 0,
         };
       }),
     [rows]
   );
 
-  /* -------- CSV 出力 -------- */
+  /* === CSV ダウンロード === */
   const downloadCSV = () => {
     const [y, m] = ym.split("-");
     const head = [
@@ -93,19 +85,18 @@ export default function InvoiceGenerator({ password }) {
         ].join(",")
       )
       .join("\n");
-    const bom = "\uFEFF";
-    const blob = new Blob([bom + head.join(",") + "\n" + body], {
+    const blob = new Blob(["\uFEFF" + head.join(",") + "\n" + body], {
       type: "text/csv",
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice_${y}_${m}.csv`;
-    a.click();
+    Object.assign(document.createElement("a"), {
+      href: url,
+      download: `invoice_${y}_${m}.csv`,
+    }).click();
     URL.revokeObjectURL(url);
   };
 
-  /* -------- 印刷 / PDF 保存 -------- */
+  /* === PDF / 印刷 === */
   const printInvoice = () => {
     const [y, m] = ym.split("-");
     const today = new Date();
@@ -114,26 +105,79 @@ export default function InvoiceGenerator({ password }) {
     }/${today.getDate()}`;
 
     const html = `
-      <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="utf-8" />
         <title>請求書 ${y}/${m}</title>
         <style>
-          body { font-family: "Noto Sans JP", sans-serif; margin: 40px; }
-          h1   { text-align: center; font-size: 24pt; margin-bottom: 24px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #999; padding: 6px 8px; text-align: right; }
-          th:first-child, td:first-child { text-align: left; }
-          th:nth-child(3), td:nth-child(3),
-          th:nth-child(5), td:nth-child(5) { font-weight: bold; }
-          td:nth-child(5) { background: #ffa50022; }
+          * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+          :root {
+            --accent: #FFF4DF;   /* ★ さらに淡いオレンジ */
+            --border: #BDBDBD;   /* ★ やや濃い罫線色 */
+            --stripe: #FAFAFA;
+          }
+          body {
+            margin: 0;
+            padding: 48px 40px 56px;
+            font-family: "Noto Sans JP", sans-serif;
+            color: #212121;
+            line-height: 1.65;
+          }
+          h1 {
+            margin: 0 0 8px;
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            color: #333;
+          }
+
+          /* ---- テーブル ---- */
+          table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 24px;
+          }
+          th, td {
+            padding: 10px 12px;
+            text-align: right;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);   /* ★ 横罫線を追加 */
+          }
+          th:last-child, td:last-child { border-right: none; }
+          th:first-child, td:first-child { text-align: left; border-left: none; }
+          thead { background: #F3F4F6; font-weight: 600; }
+          tbody tr:nth-child(odd)  { background: var(--stripe); }
+          tbody tr:nth-child(even) { background: #FFF; }
+
+          th.invoice, td.invoice {
+            background: var(--accent) !important;
+            font-weight: 700;
+            color: #000;
+          }
+          th.settlement, td.settlement { font-weight: 600; }
+
+          footer { margin-top: 28px; font-size: 14px; }
         </style>
-      </head><body>
+      </head>
+      <body>
         <h1>商店</h1>
         <p>本日付けで商店の精算を行いましたので、ご確認のほどよろしくお願いいたします。　${todayStr}</p>
+
         <table>
           <thead>
             <tr>
-              <th>名前</th><th>繰り越し</th><th>${m}月清算分</th>
-              <th>前払い</th><th>${m}月請求額</th><th>次回前払い</th>
+              <th>名前</th>
+              <th>繰り越し</th>
+              <th class="settlement">${m}月清算分</th>
+              <th>前払い</th>
+              <th class="invoice">${m}月請求額</th>
+              <th>次回前払い</th>
             </tr>
           </thead>
           <tbody>
@@ -143,38 +187,44 @@ export default function InvoiceGenerator({ password }) {
               <tr>
                 <td>${r.name}</td>
                 <td>${r.carry || 0}</td>
-                <td>${r.settlement}</td>
+                <td class="settlement">${r.settlement}</td>
                 <td>${r.advance || 0}</td>
-                <td>${r.invoice}</td>
+                <td class="invoice">${r.invoice}</td>
                 <td>${r.nextAdvance}</td>
               </tr>`
               )
               .join("")}
           </tbody>
         </table>
-        <p style="margin-top:24px;">気になることがございましたら、商店係までよろしくお願いいたします。</p>
-      </body></html>
+
+        <footer>
+          <p>気になることがございましたら、商店係までよろしくお願いいたします。</p>
+        </footer>
+      </body>
+      </html>
     `;
 
     const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.top = "-10000px";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
+    Object.assign(iframe.style, {
+      position: "fixed",
+      top: "-9999px",
+      width: "0",
+      height: "0",
+      visibility: "hidden",
+    });
     iframe.srcdoc = html;
     iframe.onload = () => {
-      iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      setTimeout(() => iframe.remove(), 1000);
+      setTimeout(() => iframe.remove(), 1500);
     };
     document.body.appendChild(iframe);
   };
 
-  /* -------- JSX -------- */
+  /* === 画面側テーブル (略) === */
   const [, m] = ym.split("-");
   return (
     <div className="flex flex-col gap-6">
-      {/* 入力欄 + ボタン */}
+      {/* 入力欄 & ボタン */}
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col">
           <span className="font-semibold mb-1">対象年月 ⏰</span>
@@ -199,7 +249,7 @@ export default function InvoiceGenerator({ password }) {
         </button>
       </div>
 
-      {/* テーブル表示 */}
+      {/* 画面プレビュー用テーブル */}
       <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
         <table className="min-w-full border-collapse">
           <thead className="sticky top-0 bg-gray-800">
@@ -239,7 +289,7 @@ export default function InvoiceGenerator({ password }) {
                     placeholder="0"
                   />
                 </td>
-                <td className="px-3 py-1 text-right font-bold bg-orange-700/30">
+                <td className="px-3 py-1 text-right font-bold bg-orange-600/20">
                   {r.invoice}
                 </td>
                 <td className="px-3 py-1 text-right">{r.nextAdvance}</td>
