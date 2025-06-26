@@ -26,14 +26,15 @@ export default function InvoiceGenerator({ password }) {
       );
       const { rows: settlements } = await res.json();
 
+      /* ⭐ 繰り越し／前払いは文字列で初期化（空文字） */
       const merged = members.map((m) => {
         const found = settlements.find((s) => s.member_id === m.id);
         return {
           id: m.id,
           name: m.name,
-          carry: 0,
+          carry: "",
           settlement: found ? found.settlement : 0,
-          advance: 0,
+          advance: "",
         };
       });
       setRows(merged);
@@ -44,15 +45,22 @@ export default function InvoiceGenerator({ password }) {
   const handleChange = (idx, key, val) =>
     setRows((rs) => {
       const cp = [...rs];
-      cp[idx][key] = isNaN(Number(val)) ? 0 : Number(val);
+      cp[idx][key] = val;
       return cp;
     });
 
   /* -------- 収支計算 -------- */
+  const toNum = (v) => {
+    const n = Number(v);
+    return isNaN(n) ? 0 : n;
+  };
+
   const computedRows = useMemo(
     () =>
       rows.map((r) => {
-        const balance = r.carry + r.settlement - r.advance;
+        const carry = toNum(r.carry);
+        const advance = toNum(r.advance);
+        const balance = carry + r.settlement - advance;
         return {
           ...r,
           invoice: balance < 0 ? 0 : balance,
@@ -77,9 +85,9 @@ export default function InvoiceGenerator({ password }) {
       .map((r) =>
         [
           r.name,
-          r.carry,
+          r.carry || 0,
           r.settlement,
-          r.advance,
+          r.advance || 0,
           r.invoice,
           r.nextAdvance,
         ].join(",")
@@ -105,12 +113,8 @@ export default function InvoiceGenerator({ password }) {
       today.getMonth() + 1
     }/${today.getDate()}`;
 
-    /* --- 印刷用 HTML 文字列 --- */
     const html = `
-      <!DOCTYPE html>
-      <html lang="ja">
-      <head>
-        <meta charset="utf-8">
+      <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
         <title>請求書 ${y}/${m}</title>
         <style>
           body { font-family: "Noto Sans JP", sans-serif; margin: 40px; }
@@ -122,20 +126,14 @@ export default function InvoiceGenerator({ password }) {
           th:nth-child(5), td:nth-child(5) { font-weight: bold; }
           td:nth-child(5) { background: #ffa50022; }
         </style>
-      </head>
-      <body>
+      </head><body>
         <h1>商店</h1>
         <p>本日付けで商店の精算を行いましたので、ご確認のほどよろしくお願いいたします。　${todayStr}</p>
-
         <table>
           <thead>
             <tr>
-              <th>名前</th>
-              <th>繰り越し</th>
-              <th>${m}月清算分</th>
-              <th>前払い</th>
-              <th>${m}月請求額</th>
-              <th>次回前払い</th>
+              <th>名前</th><th>繰り越し</th><th>${m}月清算分</th>
+              <th>前払い</th><th>${m}月請求額</th><th>次回前払い</th>
             </tr>
           </thead>
           <tbody>
@@ -144,9 +142,9 @@ export default function InvoiceGenerator({ password }) {
                 (r) => `
               <tr>
                 <td>${r.name}</td>
-                <td>${r.carry}</td>
+                <td>${r.carry || 0}</td>
                 <td>${r.settlement}</td>
-                <td>${r.advance}</td>
+                <td>${r.advance || 0}</td>
                 <td>${r.invoice}</td>
                 <td>${r.nextAdvance}</td>
               </tr>`
@@ -154,29 +152,21 @@ export default function InvoiceGenerator({ password }) {
               .join("")}
           </tbody>
         </table>
-
-        <p style="margin-top: 24px;">
-          気になることがございましたら、商店係までよろしくお願いいたします。
-        </p>
-      </body>
-      </html>
+        <p style="margin-top:24px;">気になることがございましたら、商店係までよろしくお願いいたします。</p>
+      </body></html>
     `;
 
-    /* --- 隠し iframe を使って印刷 --- */
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
     iframe.style.top = "-10000px";
     iframe.style.width = "0";
     iframe.style.height = "0";
     iframe.srcdoc = html;
-
     iframe.onload = () => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      /* 印刷後しばらくして iframe を除去 */
       setTimeout(() => iframe.remove(), 1000);
     };
-
     document.body.appendChild(iframe);
   };
 
@@ -209,7 +199,7 @@ export default function InvoiceGenerator({ password }) {
         </button>
       </div>
 
-      {/* テーブル（画面表示用） */}
+      {/* テーブル表示 */}
       <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
         <table className="min-w-full border-collapse">
           <thead className="sticky top-0 bg-gray-800">
@@ -228,10 +218,11 @@ export default function InvoiceGenerator({ password }) {
                 <td className="px-3 py-1 text-left">{r.name}</td>
                 <td className="px-3 py-1">
                   <input
-                    type="number"
+                    type="text"
                     value={r.carry}
                     onChange={(e) => handleChange(idx, "carry", e.target.value)}
-                    className="w-20 bg-transparent border-b border-gray-600 text-right"
+                    className="w-full min-w-[4rem] bg-transparent border-b border-gray-600 text-right"
+                    placeholder="0"
                   />
                 </td>
                 <td className="px-3 py-1 text-right font-bold">
@@ -239,12 +230,13 @@ export default function InvoiceGenerator({ password }) {
                 </td>
                 <td className="px-3 py-1">
                   <input
-                    type="number"
+                    type="text"
                     value={r.advance}
                     onChange={(e) =>
                       handleChange(idx, "advance", e.target.value)
                     }
-                    className="w-20 bg-transparent border-b border-gray-600 text-right"
+                    className="w-full min-w-[4rem] bg-transparent border-b border-gray-600 text-right"
+                    placeholder="0"
                   />
                 </td>
                 <td className="px-3 py-1 text-right font-bold bg-orange-700/30">
