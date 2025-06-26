@@ -1,13 +1,11 @@
-// frontend/src/components/InvoiceGenerator.jsx
+// InvoiceGenerator.jsx
 import { useEffect, useMemo, useState } from "react";
 import { fetchMembers } from "../api";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 
 const ADMIN_BASE = "/api/admin";
 
 export default function InvoiceGenerator({ password }) {
-  /* === 入力年月 === */
+  /* === 対象年月 === */
   const now = new Date();
   const [ym, setYm] = useState(
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
@@ -16,19 +14,18 @@ export default function InvoiceGenerator({ password }) {
   /* === メンバー & 清算額 === */
   const [rows, setRows] = useState([]);
 
-  /* ---------- 初期ロード / 年月変更時 ---------- */
+  /* -------- データ取得 -------- */
   useEffect(() => {
     (async () => {
       const [year, month] = ym.split("-").map(Number);
-      /* 1. メンバー一覧 */
+
       const members = await fetchMembers();
-      /* 2. 当月清算額 */
       const res = await fetch(
         `${ADMIN_BASE}/invoice-summary?year=${year}&month=${month}`,
         { headers: { "x-admin-pass": password } }
       );
       const { rows: settlements } = await res.json();
-      /* 3. 行オブジェクト生成 */
+
       const merged = members.map((m) => {
         const found = settlements.find((s) => s.member_id === m.id);
         return {
@@ -43,7 +40,7 @@ export default function InvoiceGenerator({ password }) {
     })();
   }, [ym, password]);
 
-  /* ---------- 入力ハンドラ ---------- */
+  /* -------- 入力ハンドラ -------- */
   const handleChange = (idx, key, val) =>
     setRows((rs) => {
       const cp = [...rs];
@@ -51,24 +48,21 @@ export default function InvoiceGenerator({ password }) {
       return cp;
     });
 
-  /* ---------- 計算ロジック ---------- */
-  const calc = (r) => {
-    const balance = r.carry + r.settlement - r.advance;
-    return balance < 0
-      ? { invoice: 0, nextAdvance: -balance }
-      : { invoice: balance, nextAdvance: 0 };
-  };
-
+  /* -------- 収支計算 -------- */
   const computedRows = useMemo(
     () =>
       rows.map((r) => {
-        const { invoice, nextAdvance } = calc(r);
-        return { ...r, invoice, nextAdvance };
+        const balance = r.carry + r.settlement - r.advance;
+        return {
+          ...r,
+          invoice: balance < 0 ? 0 : balance,
+          nextAdvance: balance < 0 ? -balance : 0,
+        };
       }),
     [rows]
   );
 
-  /* ---------- CSV ダウンロード ---------- */
+  /* -------- CSV 出力 -------- */
   const downloadCSV = () => {
     const [y, m] = ym.split("-");
     const head = [
@@ -79,7 +73,6 @@ export default function InvoiceGenerator({ password }) {
       `${m}月請求額`,
       "次回前払い",
     ];
-    const bom = "\uFEFF"; // 文字化け防止
     const body = computedRows
       .map((r) =>
         [
@@ -92,6 +85,7 @@ export default function InvoiceGenerator({ password }) {
         ].join(",")
       )
       .join("\n");
+    const bom = "\uFEFF";
     const blob = new Blob([bom + head.join(",") + "\n" + body], {
       type: "text/csv",
     });
@@ -103,74 +97,94 @@ export default function InvoiceGenerator({ password }) {
     URL.revokeObjectURL(url);
   };
 
-  /* ---------- PDF ダウンロード ---------- */
-  const downloadPDF = () => {
-    const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+  /* -------- 印刷 / PDF 保存 -------- */
+  const printInvoice = () => {
+    const [y, m] = ym.split("-");
     const today = new Date();
     const todayStr = `${today.getFullYear()}/${
       today.getMonth() + 1
     }/${today.getDate()}`;
-    const [y, m] = ym.split("-");
 
-    /* タイトル */
-    doc.setFontSize(22);
-    doc.text("商店", 105, 20, { align: "center" });
+    /* --- 印刷用 HTML 文字列 --- */
+    const html = `
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="utf-8">
+        <title>請求書 ${y}/${m}</title>
+        <style>
+          body { font-family: "Noto Sans JP", sans-serif; margin: 40px; }
+          h1   { text-align: center; font-size: 24pt; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #999; padding: 6px 8px; text-align: right; }
+          th:first-child, td:first-child { text-align: left; }
+          th:nth-child(3), td:nth-child(3),
+          th:nth-child(5), td:nth-child(5) { font-weight: bold; }
+          td:nth-child(5) { background: #ffa50022; }
+        </style>
+      </head>
+      <body>
+        <h1>商店</h1>
+        <p>本日付けで商店の精算を行いましたので、ご確認のほどよろしくお願いいたします。　${todayStr}</p>
 
-    /* あいさつ文 */
-    doc.setFontSize(12);
-    doc.text(
-      `本日付けで商店の精算を行いましたので、ご確認のほどよろしくお願いいたします。　${todayStr}`,
-      14,
-      30
-    );
+        <table>
+          <thead>
+            <tr>
+              <th>名前</th>
+              <th>繰り越し</th>
+              <th>${m}月清算分</th>
+              <th>前払い</th>
+              <th>${m}月請求額</th>
+              <th>次回前払い</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${computedRows
+              .map(
+                (r) => `
+              <tr>
+                <td>${r.name}</td>
+                <td>${r.carry}</td>
+                <td>${r.settlement}</td>
+                <td>${r.advance}</td>
+                <td>${r.invoice}</td>
+                <td>${r.nextAdvance}</td>
+              </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>
 
-    /* 表 */
-    const head = [
-      [
-        "名前",
-        "繰り越し",
-        `${m}月清算分`,
-        "前払い",
-        `${m}月請求額`,
-        "次回前払い",
-      ],
-    ];
-    const body = computedRows.map((r) => [
-      r.name,
-      r.carry,
-      r.settlement,
-      r.advance,
-      r.invoice,
-      r.nextAdvance,
-    ]);
-    doc.autoTable({
-      head,
-      body,
-      startY: 38,
-      styles: { halign: "right" },
-      headStyles: { halign: "center" },
-      columnStyles: {
-        2: { fontStyle: "bold" }, // 清算分
-        4: { fontStyle: "bold", fillColor: [255, 165, 0] }, // 請求額
-      },
-    });
+        <p style="margin-top: 24px;">
+          気になることがございましたら、商店係までよろしくお願いいたします。
+        </p>
+      </body>
+      </html>
+    `;
 
-    /* フッタ */
-    const lastY = doc.autoTable.previous.finalY;
-    doc.text(
-      "気になることがございましたら、商店係までよろしくお願いいたします。",
-      14,
-      lastY + 12
-    );
+    /* --- 隠し iframe を使って印刷 --- */
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "-10000px";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.srcdoc = html;
 
-    doc.save(`invoice_${y}_${m}.pdf`);
+    iframe.onload = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      /* 印刷後しばらくして iframe を除去 */
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
-  /* ---------- JSX ---------- */
-  const [y, m] = ym.split("-");
+  /* -------- JSX -------- */
+  const [, m] = ym.split("-");
   return (
     <div className="flex flex-col gap-6">
-      {/* 入力欄 ＋ DL ボタン */}
+      {/* 入力欄 + ボタン */}
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col">
           <span className="font-semibold mb-1">対象年月 ⏰</span>
@@ -188,14 +202,14 @@ export default function InvoiceGenerator({ password }) {
           📥 CSVダウンロード
         </button>
         <button
-          onClick={downloadPDF}
+          onClick={printInvoice}
           className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold"
         >
-          📄 PDFダウンロード
+          🖨️ 印刷 / PDF保存
         </button>
       </div>
 
-      {/* テーブル */}
+      {/* テーブル（画面表示用） */}
       <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
         <table className="min-w-full border-collapse">
           <thead className="sticky top-0 bg-gray-800">
