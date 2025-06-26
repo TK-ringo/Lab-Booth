@@ -49,30 +49,48 @@ app.get("/api/products", (_req, res) => {
   }
 });
 
+/* ⭐ 購入確定エンドポイントを強化 ⭐ */
 app.post("/api/purchase", (req, res) => {
   try {
     const { memberId, productIds } = req.body;
     const now = new Date().toISOString();
-    const insert = db.prepare(`
-      INSERT INTO purchases (member_id, product_id, timestamp)
-      VALUES (?, ?, ?)
+
+    /* 名前を事前に取得 */
+    const getMember = db.prepare("SELECT name FROM members WHERE id = ?");
+    const getProduct = db.prepare("SELECT name FROM products WHERE id = ?");
+
+    const memberRow = getMember.get(memberId);
+    if (!memberRow) {
+      return res.status(400).json({ error: "不正な memberId です" });
+    }
+    const memberName = memberRow.name;
+
+    const insertPurchase = db.prepare(`
+      INSERT INTO purchases
+        (member_id, member_name, product_id, product_name, timestamp)
+      VALUES (?, ?, ?, ?, ?)
     `);
     const updateStock = db.prepare(
       "UPDATE products SET stock = stock - 1 WHERE id = ?"
     );
 
+    /* 1 件ずつトランザクションで処理 */
     db.transaction(() => {
       productIds.forEach((pid) => {
-        insert.run(memberId, pid, now);
+        const prodRow = getProduct.get(pid);
+        if (!prodRow) throw new Error(`product_id=${pid} が存在しません`);
+        insertPurchase.run(memberId, memberName, pid, prodRow.name, now);
         updateStock.run(pid);
       });
     })();
 
+    /* 最新状態を返す */
     res.json({
       members: db.prepare("SELECT * FROM members").all(),
       products: db.prepare("SELECT * FROM products").all(),
     });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "購入処理に失敗しました" });
   }
 });

@@ -28,14 +28,17 @@ db.exec(`
     image   TEXT
   );
 
+  /* ⭐ purchases を 6 列構成に変更 ⭐ */
   CREATE TABLE IF NOT EXISTS purchases (
-    id         INTEGER PRIMARY KEY,
-    member_id  INTEGER,
-    product_id INTEGER,
-    timestamp  TEXT
+    id           INTEGER PRIMARY KEY,
+    member_id    INTEGER,
+    member_name  TEXT,
+    product_id   INTEGER,
+    product_name TEXT,
+    timestamp    TEXT
   );
 
-  -- restock_history（price 列を含む完全版）
+  /* restock_history（price 列を含む完全版） */
   CREATE TABLE IF NOT EXISTS restock_history (
     id           INTEGER PRIMARY KEY,
     product_id   INTEGER NOT NULL,
@@ -49,7 +52,7 @@ db.exec(`
   );
 `);
 
-/* ───────── 既存 DB に price 列が無い場合は追加 ───────── */
+/* ────── restock_history に price 列が無い旧 DB への対応 ────── */
 try {
   const colExists = db
     .prepare("PRAGMA table_info(restock_history)")
