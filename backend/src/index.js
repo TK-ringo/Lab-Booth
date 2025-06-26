@@ -12,23 +12,20 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-/* ===== 画像アップロード設定 ===== */
+/* ===== 画像アップロード設定（省略せず全文） ===== */
 const uploadDir = path.resolve("uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
 const storage = multer.diskStorage({
   destination: uploadDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `product_${req.params.id}_${Date.now()}${ext}`);
-  },
+  filename: (req, file, cb) =>
+    cb(
+      null,
+      `product_${req.params.id}_${Date.now()}${path.extname(file.originalname)}`
+    ),
 });
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use("/api/uploads", express.static(uploadDir));
-/* ================================= */
+/* ============================================= */
 
 /* ───────── 一般利用 API ───────── */
 app.get("/api/members", (_req, res) => {
@@ -125,6 +122,40 @@ app.use((err, _req, res, next) => {
 /* ======== 🔐 管理者 API ======== */
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
 app.use("/api/admin", adminAuth);
+
+/* ▼▼▼ 新規追加：月次清算額取得エンドポイント ▼▼▼ */
+app.get("/api/admin/invoice-summary", (req, res) => {
+  try {
+    const now = new Date();
+    const year = req.query.year ?? now.getFullYear();
+    const month = req.query.month ?? now.getMonth() + 1;
+    const yStr = String(year);
+    const mStr = String(month).padStart(2, "0");
+
+    /* 各メンバーごとの合計購入額を取得（該当月が無ければ 0） */
+    const stmt = db.prepare(`
+      SELECT
+        m.id   AS member_id,
+        m.name AS member_name,
+        COALESCE((
+          SELECT SUM(pr.price)
+          FROM purchases      p
+          JOIN products pr ON pr.id = p.product_id
+          WHERE p.member_id = m.id
+            AND strftime('%Y', p.timestamp) = ?
+            AND strftime('%m', p.timestamp) = ?
+        ), 0) AS settlement
+      FROM members m
+      ORDER BY m.id
+    `);
+    const rows = stmt.all(yStr, mStr);
+    res.json({ rows });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "集計に失敗しました" });
+  }
+});
+/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* ── 列情報取得 ───────── */
 app.get("/api/admin/:table/columns", (req, res) => {
