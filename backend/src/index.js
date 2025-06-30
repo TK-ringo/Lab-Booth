@@ -12,9 +12,10 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-/* ===== 画像アップロード設定（省略せず全文） ===== */
+/* ===== 画像アップロード設定 ===== */
 const uploadDir = path.resolve("uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) =>
@@ -25,7 +26,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use("/api/uploads", express.static(uploadDir));
-/* ============================================= */
+/* ================================= */
 
 /* ───────── 一般利用 API ───────── */
 app.get("/api/members", (_req, res) => {
@@ -96,19 +97,37 @@ app.post("/api/purchase", (req, res) => {
 app.post("/api/products/:id/image", upload.single("image"), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "画像がありません" });
+
     const id = Number(req.params.id);
+
+    /* === ① 既存画像を安全に削除 === */
+    const cur = db.prepare("SELECT image FROM products WHERE id = ?").get(id);
+    if (cur && cur.image) {
+      const oldName = path.basename(cur.image); // ファイル名だけ切り出し
+      const oldPath = path.join(uploadDir, oldName); // 実ファイルの絶対パス
+      try {
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      } catch (e) {
+        console.error("⚠️ 旧画像の削除に失敗:", e.message);
+      }
+    }
+
+    /* === ② 新しい画像を保存・パス更新 === */
     const publicPath = `/api/uploads/${req.file.filename}`;
     db.prepare("UPDATE products SET image = ? WHERE id = ?").run(
       publicPath,
       id
     );
+
     res.json({
       product: db.prepare("SELECT * FROM products WHERE id = ?").get(id),
     });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "画像アップロードに失敗しました" });
   }
 });
+/* -------------------------------- */
 
 /* ----- multer サイズ超過 ----- */
 app.use((err, _req, res, next) => {
