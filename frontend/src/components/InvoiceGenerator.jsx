@@ -1,10 +1,10 @@
-// InvoiceGenerator.jsx
+// frontend/src/components/InvoiceGenerator.jsx
 import { useEffect, useMemo, useState } from "react";
 import { fetchMembers } from "../api";
 
 const ADMIN_BASE = "/api/admin";
 
-export default function InvoiceGenerator({ password }) {
+export default function InvoiceGenerator({ token }) {
   /* === 対象年月 === */
   const now = new Date();
   const [ym, setYm] = useState(
@@ -20,7 +20,7 @@ export default function InvoiceGenerator({ password }) {
       const members = await fetchMembers();
       const res = await fetch(
         `${ADMIN_BASE}/invoice-summary?year=${year}&month=${month}`,
-        { headers: { "x-admin-pass": password } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const { rows: settlements } = await res.json();
 
@@ -37,7 +37,7 @@ export default function InvoiceGenerator({ password }) {
         })
       );
     })();
-  }, [ym, password]);
+  }, [ym, token]);
 
   /* === 入力変更 === */
   const handleChange = (idx, key, val) =>

@@ -6,6 +6,8 @@ import ProductList from "./components/ProductList";
 import CartList from "./components/CartList";
 import Toast from "./components/Toast";
 import useBarcodeScanner from "./hooks/useBarcodeScanner";
+import TopBar from "./components/TopBar";
+import { AuthContext } from "./contexts/AuthContext";
 
 export default function App() {
   const [members, setMembers] = useState([]);
@@ -125,47 +127,50 @@ export default function App() {
 
   /* ────── 画面描画 ────── */
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
-      {/* タイトル */}
-      <h1
-        className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
+    <>
+      <TopBar />
+      <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
+        {/* タイトル */}
+        <h1
+          className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
                      bg-clip-text text-transparent bg-gradient-to-r
                      from-indigo-400 via-purple-400 to-pink-400"
-      >
-        Lab Booth
-      </h1>
+        >
+          Lab Booth
+        </h1>
 
-      {/* 名前選択 */}
-      <div className="flex justify-center">
-        <NameSelector
-          members={members}
-          currentMember={currentMember}
-          setCurrentMember={setMember}
-        />
+        {/* 名前選択 */}
+        <div className="flex justify-center">
+          <NameSelector
+            members={members}
+            currentMember={currentMember}
+            setCurrentMember={setMember}
+          />
+        </div>
+
+        {/* 商品一覧 & カート */}
+        <div className="flex flex-col lg:flex-row gap-12">
+          <ProductList
+            products={products}
+            onAdd={addProduct}
+            onImageUpload={handleImageUpload}
+          />
+          <CartList
+            cart={cart}
+            onRemove={removeProduct}
+            onConfirm={handleConfirm}
+          />
+        </div>
+
+        {/* トースト通知 */}
+        {toast && (
+          <Toast
+            message={toast.msg}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
-
-      {/* 商品一覧 & カート */}
-      <div className="flex flex-col lg:flex-row gap-12">
-        <ProductList
-          products={products}
-          onAdd={addProduct}
-          onImageUpload={handleImageUpload}
-        />
-        <CartList
-          cart={cart}
-          onRemove={removeProduct}
-          onConfirm={handleConfirm}
-        />
-      </div>
-
-      {/* トースト通知 */}
-      {toast && (
-        <Toast
-          message={toast.msg}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </div>
+    </>
   );
 }

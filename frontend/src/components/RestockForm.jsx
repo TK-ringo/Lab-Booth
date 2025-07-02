@@ -3,7 +3,7 @@ import { forwardRef, useImperativeHandle, useState } from "react";
 
 const BASE = "/api/admin";
 
-const RestockForm = forwardRef(({ password }, ref) => {
+const RestockForm = forwardRef(({ token }, ref) => {
   const [text, setText] = useState("");
 
   /* 親（Admin.jsx）の確定ボタンから呼ばれる */
@@ -17,7 +17,7 @@ const RestockForm = forwardRef(({ password }, ref) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-pass": password,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ text }),
       });
@@ -42,7 +42,7 @@ const RestockForm = forwardRef(({ password }, ref) => {
         className="w-full h-96 p-4 bg-gray-800/60 rounded-xl
                    border border-gray-700 focus:outline-none
                    focus:ring-2 focus:ring-indigo-600"
-        placeholder="ここにペースト..."
+        placeholder="ここにペースト."
         value={text}
         onChange={(e) => setText(e.target.value)}
       />

@@ -1,5 +1,16 @@
 const BASE = import.meta.env.VITE_API_BASE || "/api";
 
+/* 追加：ログイン */
+export async function login(password) {
+  const res = await fetch(`${BASE}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) throw new Error("ログイン失敗");
+  return (await res.json()).token;
+}
+
 export async function fetchMembers() {
   const res = await fetch(`${BASE}/members`);
   if (!res.ok) throw new Error("メンバー取得に失敗しました");

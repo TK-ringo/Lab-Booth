@@ -1,6 +1,7 @@
 // backend/src/index.js
 import express from "express";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken"; // ★ 追加
 import db from "./db/init.js";
 import multer from "multer";
 import fs from "fs";
@@ -11,6 +12,19 @@ import parseOrderItems from "./parseOrderItems.js";
 dotenv.config();
 const app = express();
 app.use(express.json());
+
+/* ===== 0. ログイン API ===== */
+app.post("/api/login", (req, res) => {
+  const { password } = req.body || {};
+  if (password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign({ role: "admin" }, process.env.ADMIN_PASSWORD, {
+      expiresIn: "7d",
+    });
+    return res.json({ token });
+  }
+  res.status(401).json({ error: "Invalid password" });
+});
+/* ========================== */
 
 /* ===== 画像アップロード設定 ===== */
 const uploadDir = path.resolve("uploads");
@@ -47,13 +61,12 @@ app.get("/api/products", (_req, res) => {
   }
 });
 
-/* ⭐ 購入確定エンドポイントを強化 ⭐ */
+/* ⭐ 購入確定エンドポイント ⭐ */
 app.post("/api/purchase", (req, res) => {
   try {
     const { memberId, productIds } = req.body;
     const now = new Date().toISOString();
 
-    /* 名前を事前に取得 */
     const getMember = db.prepare("SELECT name FROM members WHERE id = ?");
     const getProduct = db.prepare("SELECT name FROM products WHERE id = ?");
 
@@ -61,7 +74,6 @@ app.post("/api/purchase", (req, res) => {
     if (!memberRow) {
       return res.status(400).json({ error: "不正な memberId です" });
     }
-    const memberName = memberRow.name;
 
     const insertPurchase = db.prepare(`
       INSERT INTO purchases
@@ -72,17 +84,15 @@ app.post("/api/purchase", (req, res) => {
       "UPDATE products SET stock = stock - 1 WHERE id = ?"
     );
 
-    /* 1 件ずつトランザクションで処理 */
     db.transaction(() => {
       productIds.forEach((pid) => {
         const prodRow = getProduct.get(pid);
         if (!prodRow) throw new Error(`product_id=${pid} が存在しません`);
-        insertPurchase.run(memberId, memberName, pid, prodRow.name, now);
+        insertPurchase.run(memberId, memberRow.name, pid, prodRow.name, now);
         updateStock.run(pid);
       });
     })();
 
-    /* 最新状態を返す */
     res.json({
       members: db.prepare("SELECT * FROM members").all(),
       products: db.prepare("SELECT * FROM products").all(),
@@ -97,22 +107,21 @@ app.post("/api/purchase", (req, res) => {
 app.post("/api/products/:id/image", upload.single("image"), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "画像がありません" });
-
     const id = Number(req.params.id);
 
-    /* === ① 既存画像を安全に削除 === */
+    /* 旧画像を削除 */
     const cur = db.prepare("SELECT image FROM products WHERE id = ?").get(id);
     if (cur && cur.image) {
-      const oldName = path.basename(cur.image); // ファイル名だけ切り出し
-      const oldPath = path.join(uploadDir, oldName); // 実ファイルの絶対パス
+      const oldName = path.basename(cur.image);
+      const oldPath = path.join(uploadDir, oldName);
       try {
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       } catch (e) {
-        console.error("⚠️ 旧画像の削除に失敗:", e.message);
+        console.error("旧画像の削除に失敗:", e.message);
       }
     }
 
-    /* === ② 新しい画像を保存・パス更新 === */
+    /* 新しい画像を保存 */
     const publicPath = `/api/uploads/${req.file.filename}`;
     db.prepare("UPDATE products SET image = ? WHERE id = ?").run(
       publicPath,
@@ -142,7 +151,6 @@ app.use((err, _req, res, next) => {
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
 app.use("/api/admin", adminAuth);
 
-/* ▼▼▼ 新規追加：月次清算額取得エンドポイント ▼▼▼ */
 app.get("/api/admin/invoice-summary", (req, res) => {
   try {
     const now = new Date();
@@ -151,14 +159,13 @@ app.get("/api/admin/invoice-summary", (req, res) => {
     const yStr = String(year);
     const mStr = String(month).padStart(2, "0");
 
-    /* 各メンバーごとの合計購入額を取得（該当月が無ければ 0） */
     const stmt = db.prepare(`
       SELECT
         m.id   AS member_id,
         m.name AS member_name,
         COALESCE((
           SELECT SUM(pr.price)
-          FROM purchases      p
+          FROM purchases p
           JOIN products pr ON pr.id = p.product_id
           WHERE p.member_id = m.id
             AND strftime('%Y', p.timestamp) = ?
@@ -174,7 +181,6 @@ app.get("/api/admin/invoice-summary", (req, res) => {
     res.status(500).json({ error: "集計に失敗しました" });
   }
 });
-/* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* ── 列情報取得 ───────── */
 app.get("/api/admin/:table/columns", (req, res) => {
