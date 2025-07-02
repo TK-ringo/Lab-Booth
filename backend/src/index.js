@@ -95,9 +95,13 @@ app.post("/api/purchase", (req, res) => {
         (member_id, member_name, product_id, product_name, timestamp)
       VALUES (?, ?, ?, ?, ?)
     `);
-    const updateStock = db.prepare(
-      "UPDATE products SET stock = stock - 1 WHERE id = ?"
-    );
+
+    /* ★ 在庫をマイナスにさせない UPDATE 文に変更 ★ */
+    const updateStock = db.prepare(`
+      UPDATE products
+      SET stock = CASE WHEN stock > 0 THEN stock - 1 ELSE 0 END
+      WHERE id = ?
+    `);
 
     db.transaction(() => {
       productIds.forEach((pid) => {
@@ -106,6 +110,8 @@ app.post("/api/purchase", (req, res) => {
         insertPurchase.run(memberId, memberRow.name, pid, prodRow.name, now);
         updateStock.run(pid);
       });
+      /* 念のため全体クランプ */
+      db.prepare("UPDATE products SET stock = 0 WHERE stock < 0").run();
     })();
 
     res.json({

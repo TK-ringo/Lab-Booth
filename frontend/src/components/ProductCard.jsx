@@ -1,16 +1,12 @@
-// frontend/src/components/ProductCard.jsx
 import { useRef, useState } from "react";
 import { uploadProductImage } from "../api";
-import MarqueeText from "./MarqueeText"; // ★ 追加
+import MarqueeText from "./MarqueeText";
 
 export default function ProductCard({ product, onAdd, onImageUpload }) {
   const fileRef = useRef(null);
   const [imgError, setImgError] = useState(false);
 
-  /* ファイル選択ダイアログを開く */
-  const openFileDialog = () => fileRef.current?.click();
-
-  /* アップロード処理 */
+  /* ---------- 画像アップロード ---------- */
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -24,7 +20,7 @@ export default function ProductCard({ product, onAdd, onImageUpload }) {
     }
   };
 
-  /* 画像 or no image プレースホルダ */
+  /* ---------- 画像領域 ---------- */
   const ImageArea = () =>
     product.image && !imgError ? (
       <img
@@ -39,27 +35,26 @@ export default function ProductCard({ product, onAdd, onImageUpload }) {
       </div>
     );
 
+  /* ---------- 描画 ---------- */
   return (
     <div
-      className="h-80 group relative overflow-hidden rounded-3xl bg-gray-800/50
-                 backdrop-blur-md shadow-glass p-4 flex flex-col gap-3
-                 hover:scale-[1.03] transition"
+      className="group relative overflow-hidden rounded-3xl
+                 bg-gray-800/50 backdrop-blur-md shadow-glass
+                 p-4 flex flex-col gap-3 hover:scale-[1.03] transition"
     >
-      {/* 画像領域 ＋ 編集アイコン */}
+      {/* 画像 + 編集ボタン */}
       <div className="relative">
         <ImageArea />
 
-        {/* 編集アイコン */}
         <button
-          onClick={openFileDialog}
+          onClick={() => fileRef.current?.click()}
           title="画像を追加 / 編集"
-          className="absolute bottom-2 right-2 p-1.5 rounded-full bg-gray-900/70
-                     text-white text-lg hover:bg-gray-800/80"
+          className="absolute bottom-2 right-2 p-1.5 rounded-full
+                     bg-gray-900/70 text-white text-lg hover:bg-gray-800/80"
         >
           ✏️
         </button>
 
-        {/* 非表示のファイル入力 */}
         <input
           type="file"
           accept="image/*"
@@ -69,24 +64,20 @@ export default function ProductCard({ product, onAdd, onImageUpload }) {
         />
       </div>
 
-      {/* 商品名・価格・在庫表示 */}
-      <div className="flex-1">
+      {/* 商品名 & 価格 */}
+      <div>
         <h3 className="text-lg font-semibold leading-snug">
-          {/* ★ ここを MarqueeText で包む */}
           <MarqueeText>{product.name}</MarqueeText>
         </h3>
         <p className="text-sm text-gray-400">{product.price}円</p>
-        <p className="text-sm text-gray-400">残量: {product.stock}</p>
       </div>
 
       {/* 追加ボタン */}
       <button
         onClick={() => onAdd(product)}
-        disabled={product.stock <= 0}
-        className="mt-auto w-full py-2 font-semibold rounded-xl
+        className="w-full py-2 font-semibold rounded-xl
                    bg-gradient-to-r from-indigo-600 to-purple-600
-                   hover:opacity-90 transition text-white
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+                   hover:opacity-90 transition text-white"
       >
         追加
       </button>

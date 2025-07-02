@@ -1,4 +1,4 @@
-// src/App.jsx
+// frontend/src/App.jsx
 import { useState, useEffect, useCallback } from "react";
 import { fetchMembers, fetchProducts, postPurchase } from "./api";
 import NameSelector from "./components/NameSelector";
@@ -7,7 +7,6 @@ import CartList from "./components/CartList";
 import Toast from "./components/Toast";
 import useBarcodeScanner from "./hooks/useBarcodeScanner";
 import TopBar from "./components/TopBar";
-import { AuthContext } from "./contexts/AuthContext";
 
 export default function App() {
   const [members, setMembers] = useState([]);
@@ -17,7 +16,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
 
-  /* ────── 初期データ取得 ────── */
+  /* 初期データ取得 */
   useEffect(() => {
     (async () => {
       try {
@@ -33,16 +32,17 @@ export default function App() {
     })();
   }, []);
 
-  /* ────── カート追加 ────── */
+  /* カート追加 */
   const addProduct = useCallback((product) => {
     setCart((c) => [...c, product]);
+    // 在庫は UI に出さないが内部同期のためにだけ更新
     setProducts((ps) =>
       ps.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
     );
     setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
   }, []);
 
-  /* ────── カート削除 ────── */
+  /* カート削除 */
   const removeProduct = useCallback((index) => {
     setCart((c) => {
       const removed = c[index];
@@ -53,15 +53,13 @@ export default function App() {
     });
   }, []);
 
-  /* ────── 画像アップロード後の更新 ────── */
-  const handleImageUpload = useCallback((updatedProduct) => {
-    setProducts((ps) =>
-      ps.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-    );
+  /* 画像アップロード後の商品情報更新 */
+  const handleImageUpload = useCallback((updated) => {
+    setProducts((ps) => ps.map((p) => (p.id === updated.id ? updated : p)));
     setToast({ msg: "画像を更新しました🖼️", type: "success" });
   }, []);
 
-  /* ────── 購入確定 ────── */
+  /* 購入確定 */
   const handleConfirm = async () => {
     if (!currentMember) {
       setToast({ msg: "名前を選択してください", type: "info" });
@@ -86,22 +84,12 @@ export default function App() {
     }
   };
 
-  /* ────── バーコードスキャン ────── */
+  /* バーコードスキャン ― 在庫チェックを撤廃 */
   const handleScan = useCallback(
     (code) => {
       const product = products.find((p) => p.barcode === code);
       if (!product) {
-        setToast({
-          msg: "読み取りエラー：登録されていない商品です😢",
-          type: "error",
-        });
-        return;
-      }
-      if (product.stock <= 0) {
-        setToast({
-          msg: `残念！「${product.name}」は売り切れです🍂`,
-          type: "error",
-        });
+        setToast({ msg: "登録されていない商品です😢", type: "error" });
         return;
       }
       addProduct(product);
@@ -110,16 +98,15 @@ export default function App() {
   );
   useBarcodeScanner(handleScan);
 
-  /* ────── ローディング表示 ────── */
-  if (isLoading) {
+  /* ローディング */
+  if (isLoading)
     return (
       <div className="h-screen flex items-center justify-center text-xl">
         読み込み中…
       </div>
     );
-  }
 
-  /* ────── 画面描画 ────── */
+  /* 画面描画 */
   return (
     <>
       <TopBar />
@@ -141,7 +128,6 @@ export default function App() {
           />
         </div>
 
-        {/* 商品一覧 & カート */}
         <div className="flex flex-col lg:flex-row gap-12">
           <ProductList
             products={products}
@@ -155,7 +141,6 @@ export default function App() {
           />
         </div>
 
-        {/* トースト通知 */}
         {toast && (
           <Toast
             message={toast.msg}
