@@ -89,9 +89,7 @@ export default function App() {
   /* ────── バーコードスキャン ────── */
   const handleScan = useCallback(
     (code) => {
-      // ① 登録商品かどうか確認
       const product = products.find((p) => p.barcode === code);
-
       if (!product) {
         setToast({
           msg: "読み取りエラー：登録されていない商品です😢",
@@ -99,8 +97,6 @@ export default function App() {
         });
         return;
       }
-
-      // ② 売り切れチェック
       if (product.stock <= 0) {
         setToast({
           msg: `残念！「${product.name}」は売り切れです🍂`,
@@ -108,8 +104,6 @@ export default function App() {
         });
         return;
       }
-
-      // ③ 在庫あり → カートへ追加
       addProduct(product);
     },
     [products, addProduct]
@@ -130,7 +124,6 @@ export default function App() {
     <>
       <TopBar />
       <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
-        {/* タイトル */}
         <h1
           className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
                      bg-clip-text text-transparent bg-gradient-to-r

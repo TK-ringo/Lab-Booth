@@ -1,6 +1,4 @@
-# frontend/Dockerfile
-
-# ------------- ビルド環境 -------------
+# ---------- ビルド環境 ----------
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -10,11 +8,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# ------------- 実行環境 --------------
+# ---------- 実行環境 ----------
 FROM nginx:stable-alpine
-
-# htpasswd 生成用
-RUN apk add --no-cache apache2-utils
 
 # Nginx 設定
 COPY nginx.conf /etc/nginx/conf.d/default.conf

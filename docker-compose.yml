@@ -16,8 +16,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    env_file:
-      - ./backend/.env # ADMIN_PASSWORD を共有
     environment:
       VITE_API_BASE: "/api"
     depends_on:
