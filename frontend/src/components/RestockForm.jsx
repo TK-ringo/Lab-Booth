@@ -42,7 +42,7 @@ const RestockForm = forwardRef(({ token }, ref) => {
         className="w-full h-96 p-4 bg-gray-800/60 rounded-xl
                    border border-gray-700 focus:outline-none
                    focus:ring-2 focus:ring-indigo-600"
-        placeholder="ここにペースト."
+        placeholder="ここにペーストしてください..."
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
