@@ -85,11 +85,13 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
       return cp;
     });
 
-  /* 新規行追加 */
+  /* 🎯 新規行追加（timestamp 自動入力対応） */
   const addRow = () => {
     const blank = {};
     columns.forEach((c) => {
-      if (c !== "id") blank[c] = "";
+      if (c !== "id") {
+        blank[c] = c === "timestamp" ? new Date().toISOString() : "";
+      }
     });
     setNewRows((r) => [...r, { __tempId: Date.now(), ...blank }]);
   };
