@@ -14,17 +14,23 @@ const app = express();
 app.use(express.json());
 
 /* ===== 共通ヘルパ ===== */
-function adjustProductStock(productId, delta, price = null) {
+function adjustProductStock(productId, delta, newPrice = null) {
   if (!productId || isNaN(delta)) return;
+
+  /* --- 在庫を加算 --- */
   db.prepare("UPDATE products SET stock = stock + ? WHERE id = ?").run(
     delta,
     productId
   );
-  if (price !== null) {
-    db.prepare("UPDATE products SET price = ? WHERE id = ?").run(
-      price,
-      productId
-    );
+
+  /* --- 価格を更新（指定がある場合のみ） --- */
+  if (newPrice !== null && newPrice !== undefined && newPrice !== "") {
+    const priceInt = Number(newPrice);
+    if (!isNaN(priceInt)) {
+      db.prepare(
+        "UPDATE products SET price = ? WHERE id = ? AND price <> ?"
+      ).run(priceInt, productId, priceInt);
+    }
   }
 }
 
