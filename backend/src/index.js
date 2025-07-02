@@ -1,7 +1,7 @@
 // backend/src/index.js
 import express from "express";
 import dotenv from "dotenv";
-import jwt from "jsonwebtoken"; // ★ 追加
+import jwt from "jsonwebtoken";
 import db from "./db/init.js";
 import multer from "multer";
 import fs from "fs";
@@ -12,6 +12,21 @@ import parseOrderItems from "./parseOrderItems.js";
 dotenv.config();
 const app = express();
 app.use(express.json());
+
+/* ===== 共通ヘルパ ===== */
+function adjustProductStock(productId, delta, price = null) {
+  if (!productId || isNaN(delta)) return;
+  db.prepare("UPDATE products SET stock = stock + ? WHERE id = ?").run(
+    delta,
+    productId
+  );
+  if (price !== null) {
+    db.prepare("UPDATE products SET price = ? WHERE id = ?").run(
+      price,
+      productId
+    );
+  }
+}
 
 /* ===== 0. ログイン API ===== */
 app.post("/api/login", (req, res) => {
@@ -24,7 +39,6 @@ app.post("/api/login", (req, res) => {
   }
   res.status(401).json({ error: "Invalid password" });
 });
-/* ========================== */
 
 /* ===== 画像アップロード設定 ===== */
 const uploadDir = path.resolve("uploads");
@@ -35,12 +49,13 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) =>
     cb(
       null,
-      `product_${req.params.id}_${Date.now()}${path.extname(file.originalname)}`
+      `product_${req.params.id || "upload"}_${Date.now()}${path.extname(
+        file.originalname
+      )}`
     ),
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 app.use("/api/uploads", express.static(uploadDir));
-/* ================================= */
 
 /* ───────── 一般利用 API ───────── */
 app.get("/api/members", (_req, res) => {
@@ -136,7 +151,6 @@ app.post("/api/products/:id/image", upload.single("image"), (req, res) => {
     res.status(500).json({ error: "画像アップロードに失敗しました" });
   }
 });
-/* -------------------------------- */
 
 /* ----- multer サイズ超過 ----- */
 app.use((err, _req, res, next) => {
@@ -145,7 +159,6 @@ app.use((err, _req, res, next) => {
   }
   next(err);
 });
-/* -------------------------------- */
 
 /* ======== 🔐 管理者 API ======== */
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
@@ -198,7 +211,9 @@ app.get("/api/admin/:table/columns", (req, res) => {
 });
 /* ──────────────────────────── */
 
-/* ------ 共通 CRUD ------ */
+/* --- 共通 CRUD --- */
+
+/* 取得 */
 app.get("/api/admin/:table", (req, res) => {
   try {
     const { table } = req.params;
@@ -213,11 +228,42 @@ app.get("/api/admin/:table", (req, res) => {
   }
 });
 
+/* 追加 */
 app.post("/api/admin/:table", (req, res) => {
   try {
     const { table } = req.params;
     if (!VALID_TABLES.includes(table)) return res.status(404).end();
-    const row = req.body;
+    const row = { ...req.body };
+
+    if (table === "restock_history") {
+      const qty = Number(row.quantity ?? 0);
+      let pid = row.product_id ? Number(row.product_id) : null;
+
+      /* 商品検索／新規作成 */
+      if (!pid && row.barcode) {
+        const found = db
+          .prepare("SELECT id FROM products WHERE barcode = ?")
+          .get(row.barcode);
+        if (found) pid = found.id;
+      }
+      if (!pid) {
+        const info = db
+          .prepare(
+            "INSERT INTO products (name, price, stock, barcode) VALUES (?,?,?,?)"
+          )
+          .run(
+            row.product_name ?? "新商品",
+            row.price ?? 0,
+            0,
+            row.barcode ?? null
+          );
+        pid = info.lastInsertRowid;
+      }
+
+      adjustProductStock(pid, qty, row.price ?? null);
+      row.product_id = pid;
+    }
+
     const cols = Object.keys(row);
     const placeholders = cols.map(() => "?").join(",");
     const stmt = db.prepare(
@@ -225,35 +271,71 @@ app.post("/api/admin/:table", (req, res) => {
     );
     const info = stmt.run(...cols.map((c) => row[c]));
     res.json({ id: info.lastInsertRowid });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "追加失敗" });
   }
 });
 
+/* 更新 */
 app.put("/api/admin/:table/:id", (req, res) => {
   try {
     const { table, id } = req.params;
     if (!VALID_TABLES.includes(table)) return res.status(404).end();
-    const row = req.body;
-    const cols = Object.keys(row).filter((c) => c !== "id");
+    const newRow = { ...req.body };
+
+    if (table === "restock_history") {
+      const oldRow = db
+        .prepare("SELECT * FROM restock_history WHERE id = ?")
+        .get(id);
+
+      if (oldRow) {
+        /* 商品IDが変わった場合 */
+        if (oldRow.product_id !== newRow.product_id) {
+          adjustProductStock(oldRow.product_id, -oldRow.quantity);
+          adjustProductStock(
+            newRow.product_id,
+            Number(newRow.quantity ?? 0),
+            newRow.price ?? null
+          );
+        } else {
+          const diff =
+            Number(newRow.quantity ?? 0) - Number(oldRow.quantity ?? 0);
+          adjustProductStock(newRow.product_id, diff, newRow.price ?? null);
+        }
+      }
+    }
+
+    const cols = Object.keys(newRow).filter((c) => c !== "id");
     const setStr = cols.map((c) => `${c}=?`).join(",");
     db.prepare(`UPDATE ${table} SET ${setStr} WHERE id=?`).run(
-      ...cols.map((c) => row[c]),
+      ...cols.map((c) => newRow[c]),
       id
     );
     res.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "更新失敗" });
   }
 });
 
+/* 削除 */
 app.delete("/api/admin/:table/:id", (req, res) => {
   try {
     const { table, id } = req.params;
     if (!VALID_TABLES.includes(table)) return res.status(404).end();
+
+    if (table === "restock_history") {
+      const oldRow = db
+        .prepare("SELECT * FROM restock_history WHERE id = ?")
+        .get(id);
+      if (oldRow) adjustProductStock(oldRow.product_id, -oldRow.quantity);
+    }
+
     db.prepare(`DELETE FROM ${table} WHERE id=?`).run(id);
     res.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "削除失敗" });
   }
 });
