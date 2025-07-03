@@ -16,7 +16,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
 
-  /* 初期データ取得 */
+  /* ---------- 初期データ取得 ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -32,7 +32,7 @@ export default function App() {
     })();
   }, []);
 
-  /* カート追加 */
+  /* ---------- カート追加 ---------- */
   const addProduct = useCallback((product) => {
     setCart((c) => [...c, product]);
     // 在庫は UI に出さないが内部同期のためにだけ更新
@@ -42,7 +42,7 @@ export default function App() {
     setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
   }, []);
 
-  /* カート削除 */
+  /* ---------- カート削除 ---------- */
   const removeProduct = useCallback((index) => {
     setCart((c) => {
       const removed = c[index];
@@ -53,13 +53,13 @@ export default function App() {
     });
   }, []);
 
-  /* 画像アップロード後の商品情報更新 */
+  /* ---------- 画像アップロード後の商品情報更新 ---------- */
   const handleImageUpload = useCallback((updated) => {
     setProducts((ps) => ps.map((p) => (p.id === updated.id ? updated : p)));
     setToast({ msg: "画像を更新しました🖼️", type: "success" });
   }, []);
 
-  /* 購入確定 */
+  /* ---------- 購入確定 ---------- */
   const handleConfirm = async () => {
     if (!currentMember) {
       setToast({ msg: "名前を選択してください", type: "info" });
@@ -77,6 +77,7 @@ export default function App() {
       setMembers(ms);
       setProducts(ps);
       setCart([]);
+      setMember(null); // 🌟★ 追加: 名前選択をリセット ★🌟
       setToast({ msg: "購入が完了しました🎉", type: "success" });
     } catch (err) {
       console.error(err);
@@ -84,7 +85,7 @@ export default function App() {
     }
   };
 
-  /* バーコードスキャン ― 在庫チェックを撤廃 */
+  /* ---------- バーコードスキャン ---------- */
   const handleScan = useCallback(
     (code) => {
       const product = products.find((p) => p.barcode === code);
@@ -98,7 +99,7 @@ export default function App() {
   );
   useBarcodeScanner(handleScan);
 
-  /* ローディング */
+  /* ---------- ローディング ---------- */
   if (isLoading)
     return (
       <div className="h-screen flex items-center justify-center text-xl">
@@ -106,7 +107,7 @@ export default function App() {
       </div>
     );
 
-  /* 画面描画 */
+  /* ---------- 画面描画 ---------- */
   return (
     <>
       <TopBar />
