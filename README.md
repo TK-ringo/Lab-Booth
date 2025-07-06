@@ -1,92 +1,108 @@
-## 🎉 Lab Booth リポジトリへようこそ
+# 🎉 Lab Booth のリポジトリへようこそ
 
-### 🌟 概要
+## 🌟 概要
 
-Lab Booth は研究室向けの無人売店管理アプリケーションです。
-フロントエンドに **React + Vite + Tailwind CSS**、バックエンドに **Express + better-sqlite3** を採用し、Docker Compose 一発起動で手軽に利用できます🏪✨
+Lab Booth は **React + Vite + Tailwind CSS** 製のフロントエンドと **Express + SQLite（better-sqlite3）** 製のバックエンドで構成された、研究室向けの購買管理アプリです 🧪🍫
 
-### 🚀 必要条件
+**Docker Compose で一発起動**でき、商品購入や請求書作成を簡単に管理できます 📦🧾
 
-1. Docker と Docker Compose が動作する環境🐳
-2. 空きポート `3000`（フロント）および `3001`（バック）🔌
-3. `.env` に設定する管理者パスワード（後述）
 
-### ⚙️ クイックスタート
+## 🚀 前提条件
+
+- Docker / Docker Compose 🐳
+- ポート `3000`（フロント）・`3001`（バックエンド）を使用可能であること
+
+
+## ⚙️ クイックスタート
 
 1. **リポジトリをクローン**
-
    ```bash
-   git clone https://github.com/TK-ringo/Lab-Booth.git
-   cd Lab-Booth
+   git clone https://github.com/your/repo.git
+   cd lab-booth
    ```
-2. **環境変数ファイルを準備**
-   プロジェクト直下に `.env` を作成し、以下を記載します
+
+2. **`.env` ファイルを backend に配置**
 
    ```env
    PORT=3001
    DATABASE_PATH=./data/shop.db
-   ADMIN_PASSWORD=your-strong-password  # 管理画面のログインに使用します🔑
+   ADMIN_PASSWORD=your-strong-password
    ```
-3. **コンテナをビルド＆起動**
+
+3. **コンテナ起動**
 
    ```bash
    docker-compose up --build
    ```
-4. **ブラウザでアクセス**
-   フロントエンド：[http://localhost:3000](http://localhost:3000)
-   管理画面：[http://localhost:3000/admin](http://localhost:3000/admin)
 
-### 🗂️ ディレクトリ構成
+4. **アクセス**
 
-```
-Lab-Booth/
-├─ backend/        ← Express API & SQLite データベース
-│  ├─ src/         ← ソースコード一式
-│  ├─ data/        ← DB 保存先（起動時自動生成）
-│  └─ uploads/     ← 商品画像保存先（自動生成）
-├─ frontend/       ← React + Vite SPA
-├─ docker-compose.yml
-└─ README.md       ← ★ こちら！
-```
+   * フロントエンド: [http://localhost:3000](http://localhost:3000)
+   * 管理画面: [http://localhost:3000/admin](http://localhost:3000/admin)
 
-### 🔐 認証と管理画面
 
-バックエンドの管理用 API `/api/admin/*` へは以下のいずれかでログイン可能です
+## 🖼️ 商品画像のアップロード
 
-1. `/api/login` へ POST で `{"password": "<ADMIN_PASSWORD>"}` を送信し、返却される Bearer トークン
-2. HTTP Basic 認証（ユーザー名は任意、パスワードに `<ADMIN_PASSWORD>`）
-3. `x-admin-pass` ヘッダーに `<ADMIN_PASSWORD>` を設定
+商品カード右下の ✏️ アイコンをクリックすると画像変更が可能です。
 
-フロントの管理画面は `/admin` 以下で展開され、CRUD 操作や請求書集計が可能です🛠️
+* **最大サイズ: 10MB**
+* 画像は `backend/uploads/` に保存され、**データベースとともに永続化**されます。
 
-### 🧾 請求書（インボイス）生成機能
 
-管理画面の「Invoice」タブでは以下を行えます
+## 🧾 請求書の自動生成
 
-* 対象年月を選択すると自動的にメンバーごとの精算額を集計
-* CSV ダウンロード📥
-* 印刷／PDF 保存🖨️
+管理画面 `/admin` から次のことが可能です：
 
-### 💾 データと画像の永続化
+* 月ごとの清算データをもとに**請求額を自動計算**
+* 任意の「繰越」「前払い」を入力
+* **CSV ダウンロード / PDF 印刷機能付き**
 
-* `backend/data/shop.db` に SQLite データが保存
-* `backend/uploads/` にアップロード画像が保存
-  いずれもホスト側ボリュームにマウントされるため、再ビルドしても消えません🤩
+💡 **ファイル名は自動で `invoice_2025_07.csv` のように生成されます**
 
-### 🛠️ 開発モード
+---
 
-ホットリロード付きでフロントとバックを同時起動するには
+## 🛠️ 開発モードでの起動（ホットリロード対応）
 
 ```bash
-npm install   # 各ディレクトリで一度だけ実行
-npm run dev   # プロジェクトルートで実行
+npm run dev
 ```
 
-これでコードを保存すると即時ブラウザ反映🔄✨
-
-### 🤝 コントリビュート大歓迎
-
-バグ報告や機能提案は Issue や Pull Request でお気軽にどうぞ🧑‍💻💬
+* `frontend/` と `backend/` を同時にホットリロードで開発可能
 
 
-ぜひ Lab Booth をお試しください！🎈
+## 📁 ディレクトリ構成
+
+```
+lab-booth/
+├─ backend/         # Express + SQLite API
+│  ├─ src/
+│  └─ uploads/      # 商品画像
+│  └─ data/         # データベース（自動生成）
+├─ frontend/        # React + Vite UI
+├─ docker-compose.yml
+└─ README.md        
+```
+
+
+## 📦 永続化されるデータ
+
+* `backend/data/shop.db`：SQLite データベース
+* `backend/uploads/`：商品画像
+
+これらはホスト側にマウントされているため、コンテナを削除しても保持されます 📂
+
+
+## 🔐 認証情報（管理画面）
+
+管理画面 `/admin` では以下のいずれかでログイン可能です：
+
+* HTTP Basic 認証
+* `x-admin-pass` ヘッダー
+* JWT（/login で取得）
+
+
+## 🤝 コントリビュート
+
+バグ報告や改善提案は Issue または Pull Request にて歓迎します！
+
+
