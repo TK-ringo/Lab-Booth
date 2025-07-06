@@ -1,93 +1,92 @@
-# 🎉 Lab Booth のリポジトリへようこそ
+## 🎉 Lab Booth リポジトリへようこそ
 
-## 🌟 概要
+### 🌟 概要
 
-Lab Booth は **React + Vite + Tailwind CSS** 製のフロントエンドと **Express + better-sqlite3** 製のバックエンドから成る “研究室向け購買管理アプリ” です。Docker Compose で一発起動できるので、複雑なセットアップなしに “無人売店” をサクッと立ち上げられます 🏪✨
+Lab Booth は研究室向けの無人売店管理アプリケーションです。
+フロントエンドに **React + Vite + Tailwind CSS**、バックエンドに **Express + better-sqlite3** を採用し、Docker Compose 一発起動で手軽に利用できます🏪✨
 
-## 🚀 必要条件
+### 🚀 必要条件
 
-1. **Docker** と **Docker Compose** が動く環境 🐳
-2. ポート `3000`（フロント）と `3001`（バックエンド）が空いていること 🔌
+1. Docker と Docker Compose が動作する環境🐳
+2. 空きポート `3000`（フロント）および `3001`（バック）🔌
+3. `.env` に設定する管理者パスワード（後述）
 
-## ⚙️ クイックスタート
+### ⚙️ クイックスタート
 
 1. **リポジトリをクローン**
 
    ```bash
    git clone https://github.com/TK-ringo/Lab-Booth.git
-   cd lab-booth
+   cd Lab-Booth
    ```
+2. **環境変数ファイルを準備**
+   プロジェクト直下に `.env` を作成し、以下を記載します
 
-2. **backend/.env を用意**
-
-   ```
+   ```env
    PORT=3001
    DATABASE_PATH=./data/shop.db
-   ADMIN_PASSWORD=your-strong-password
+   ADMIN_PASSWORD=your-strong-password  # 管理画面のログインに使用します🔑
    ```
-
-3. **コンテナをビルドして起動**
+3. **コンテナをビルド＆起動**
 
    ```bash
    docker-compose up --build
    ```
+4. **ブラウザでアクセス**
+   フロントエンド：[http://localhost:3000](http://localhost:3000)
+   管理画面：[http://localhost:3000/admin](http://localhost:3000/admin)
 
-4. ブラウザで [http://localhost:3000](http://localhost:3000) を開けば完了 🎈
-
-## 🗂️ ディレクトリ構成
+### 🗂️ ディレクトリ構成
 
 ```
-lab-booth/
-├─ backend/        ← Express API & SQLite
-│  ├─ src/
-│  └─ data/        (起動時に自動生成・Git 管理外)
+Lab-Booth/
+├─ backend/        ← Express API & SQLite データベース
+│  ├─ src/         ← ソースコード一式
+│  ├─ data/        ← DB 保存先（起動時自動生成）
+│  └─ uploads/     ← 商品画像保存先（自動生成）
 ├─ frontend/       ← React + Vite SPA
 ├─ docker-compose.yml
-└─ README.md      ← ★ コレ！
+└─ README.md       ← ★ こちら！
 ```
 
-## 🔐 非公開ファイルと .gitignore
+### 🔐 認証と管理画面
 
-- **`.env`** : パスワードやポート設定を含むため **リポジトリには入れません** 🛡️
-- **`backend/data/`** : SQLite データベース。コンテナ起動時に生成され、ホスト側にボリュームマウントされます 📂
-- **`backend/uploads/`** : 商品画像の保存先。こちらもボリュームで永続化されます 🖼️
-- **`node_modules/` / `dist/` / `*.log`** などの生成物も Git には含まれません 🚫
+バックエンドの管理用 API `/api/admin/*` へは以下のいずれかでログイン可能です
 
-これらは `.gitignore` で除外されていますので、GitHub 上には存在しません。クローン直後は空ディレクトリ、または存在しない状態が正しい挙動です 💡
+1. `/api/login` へ POST で `{"password": "<ADMIN_PASSWORD>"}` を送信し、返却される Bearer トークン
+2. HTTP Basic 認証（ユーザー名は任意、パスワードに `<ADMIN_PASSWORD>`）
+3. `x-admin-pass` ヘッダーに `<ADMIN_PASSWORD>` を設定
 
-## 💾 データベースと画像の永続化
+フロントの管理画面は `/admin` 以下で展開され、CRUD 操作や請求書集計が可能です🛠️
 
-初回起動後に **backend/data/shop.db** と **backend/uploads/** が自動生成されます。
-ホスト側にマウントされるため、コンテナを再ビルドしてもデータと画像は失われません 🤩
+### 🧾 請求書（インボイス）生成機能
 
-## 🛠️ 開発モード
+管理画面の「Invoice」タブでは以下を行えます
 
-ローカルでホットリロードを有効にしたい場合は、次のコマンドでフロントエンドとバックエンドを同時起動できます。
+* 対象年月を選択すると自動的にメンバーごとの精算額を集計
+* CSV ダウンロード📥
+* 印刷／PDF 保存🖨️
+
+### 💾 データと画像の永続化
+
+* `backend/data/shop.db` に SQLite データが保存
+* `backend/uploads/` にアップロード画像が保存
+  いずれもホスト側ボリュームにマウントされるため、再ビルドしても消えません🤩
+
+### 🛠️ 開発モード
+
+ホットリロード付きでフロントとバックを同時起動するには
 
 ```bash
-npm run dev
+npm install   # 各ディレクトリで一度だけ実行
+npm run dev   # プロジェクトルートで実行
 ```
 
-コードを保存すると即座にブラウザへ反映 🔄✨
+これでコードを保存すると即時ブラウザ反映🔄✨
 
-## 📮 管理者ページ
+### 🤝 コントリビュート大歓迎
 
-- URL: `/admin`
-- 認証: **Basic 認証** または **`x-admin-pass` ヘッダー**
-- パスワードは `.env` の `ADMIN_PASSWORD` で設定します 🔑
+バグ報告や機能提案は Issue や Pull Request でお気軽にどうぞ🧑‍💻💬
 
-## 🎨 画像アップロード
 
-商品カード右下の ✏️ アイコンから画像を変更できます。
-1 ファイルあたり **10 MB** までアップロード可能です（Nginx 側で 20 MB まで許可）。
-
-## 🤝 コントリビュート
-
-バグ報告や機能提案、大歓迎です！
-Issue や Pull Request でお気軽にご連絡ください 🧑‍💻💬
-
-## 📜 ライセンス
-
-本プロジェクトは **MIT License** です。詳細は `LICENSE` をご確認ください 📄✨
-
-✨ 以上で README は終わりです。Lab Booth を楽しんでください 🎉
+ぜひ Lab Booth をお試しください！🎈
