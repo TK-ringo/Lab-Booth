@@ -6,15 +6,20 @@ import ProductList from "./components/ProductList";
 import CartList from "./components/CartList";
 import Toast from "./components/Toast";
 import useBarcodeScanner from "./hooks/useBarcodeScanner";
+import useSoundEffects from "./hooks/useSoundEffects";
 import TopBar from "./components/TopBar";
 
 export default function App() {
+  /* ---------- 状態 ---------- */
   const [members, setMembers] = useState([]);
   const [products, setProducts] = useState([]);
   const [currentMember, setMember] = useState(null);
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
+
+  /* 🎵 効果音フック */
+  const { play } = useSoundEffects();
 
   /* ---------- 初期データ取得 ---------- */
   useEffect(() => {
@@ -33,14 +38,21 @@ export default function App() {
   }, []);
 
   /* ---------- カート追加 ---------- */
-  const addProduct = useCallback((product) => {
-    setCart((c) => [...c, product]);
-    // 在庫は UI に出さないが内部同期のためにだけ更新
-    setProducts((ps) =>
-      ps.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
-    );
-    setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
-  }, []);
+  /**
+   * @param {object} product - 追加する商品
+   * @param {boolean} playSound - 効果音を鳴らすか（デフォルト true）
+   */
+  const addProduct = useCallback(
+    (product, playSound = true) => {
+      if (playSound) play("addProduct"); // 🔑 ここを条件付きに！
+      setCart((c) => [...c, product]);
+      setProducts((ps) =>
+        ps.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
+      );
+      setToast({ msg: `${product.name} を追加しました😊`, type: "success" });
+    },
+    [play]
+  );
 
   /* ---------- カート削除 ---------- */
   const removeProduct = useCallback((index) => {
@@ -74,10 +86,11 @@ export default function App() {
         memberId: currentMember.id,
         productIds: cart.map((p) => p.id),
       });
+      play("confirm");
       setMembers(ms);
       setProducts(ps);
       setCart([]);
-      setMember(null); // 🌟★ 追加: 名前選択をリセット ★🌟
+      setMember(null);
       setToast({ msg: "購入が完了しました🎉", type: "success" });
     } catch (err) {
       console.error(err);
@@ -90,12 +103,14 @@ export default function App() {
     (code) => {
       const product = products.find((p) => p.barcode === code);
       if (!product) {
+        play("scanError");
         setToast({ msg: "登録されていない商品です😢", type: "error" });
         return;
       }
-      addProduct(product);
+      play("scanSuccess");           // ✅ 成功音だけ再生
+      addProduct(product, false);    // 🔕 追加音は鳴らさない
     },
-    [products, addProduct]
+    [products, addProduct, play]
   );
   useBarcodeScanner(handleScan);
 
@@ -132,7 +147,7 @@ export default function App() {
         <div className="flex flex-col lg:flex-row gap-12">
           <ProductList
             products={products}
-            onAdd={addProduct}
+            onAdd={addProduct}          
             onImageUpload={handleImageUpload}
           />
           <CartList
