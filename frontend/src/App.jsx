@@ -124,47 +124,51 @@ export default function App() {
 
   /* ---------- 画面描画 ---------- */
   return (
-    <>
-      <TopBar />
-      <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
+    <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-12 h-full">
+      {/* タイトル中央・ログインボタン右寄せ */}
+      <div className="relative flex items-center mt-6 mb-2 min-h-[3.5rem]">
         <h1
-          className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
-                     bg-clip-text text-transparent bg-gradient-to-r
-                     from-indigo-400 via-purple-400 to-pink-400"
+          className="absolute left-1/2 -translate-x-1/2 text-5xl md:text-6xl font-extrabold tracking-wider
+                      bg-clip-text text-transparent bg-gradient-to-r
+                      from-indigo-400 via-purple-400 to-pink-400"
+          style={{ whiteSpace: "nowrap" }}
         >
           Lab Booth
         </h1>
-
-        {/* 名前選択 */}
-        <div className="flex justify-center">
-          <NameSelector
-            members={members}
-            currentMember={currentMember}
-            setCurrentMember={setMember}
-          />
+        <div className="ml-auto">
+          <TopBar />
         </div>
-
-        <div className="flex flex-col lg:flex-row gap-12">
-          <ProductList
-            products={products}
-            onAdd={addProduct}          
-            onImageUpload={handleImageUpload}
-          />
-          <CartList
-            cart={cart}
-            onRemove={removeProduct}
-            onConfirm={handleConfirm}
-          />
-        </div>
-
-        {toast && (
-          <Toast
-            message={toast.msg}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
       </div>
-    </>
+
+      {/* 名前選択 */}
+      <div className="flex justify-center mb-2">
+        <NameSelector
+          members={members}
+          currentMember={currentMember}
+          setCurrentMember={setMember}
+        />
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        <ProductList
+          products={products}
+          onAdd={addProduct}
+          onImageUpload={handleImageUpload}
+        />
+        <CartList
+          cart={cart}
+          onRemove={removeProduct}
+          onConfirm={handleConfirm}
+        />
+      </div>
+
+      {toast && (
+        <Toast
+          message={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
   );
 }
