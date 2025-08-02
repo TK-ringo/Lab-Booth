@@ -20,10 +20,11 @@ export default function NameSelector({
       </button>
       {open && (
         <ul
-          className="absolute top-full mt-3 w-[36rem]
+          className="absolute top-full mt-3 
+                     w-[90vw] sm:w-[36rem] 
                      rounded-2xl bg-gray-800/70 backdrop-blur-md
                      shadow-glass border border-gray-700 z-40
-                     grid grid-cols-4 gap-2 p-3"
+                     grid grid-cols-2 sm:grid-cols-4 gap-2 p-3"
         >
           {members.map((m) => (
             <li
