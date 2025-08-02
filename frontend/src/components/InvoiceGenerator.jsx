@@ -15,6 +15,9 @@ export default function InvoiceGenerator({ token }) {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
+    const isValidYm = /^\d{4}-(0[1-9]|1[0-2])$/.test(ym);
+    if (!isValidYm) return;
+
     (async () => {
       const [year, month] = ym.split("-").map(Number);
       const members = await fetchMembers();
