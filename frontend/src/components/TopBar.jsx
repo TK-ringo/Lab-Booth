@@ -36,7 +36,28 @@ export default function TopBar() {
   return (
     <>
       {/* 右上のログイン / ログアウト ボタン */}
-      <div className="w-full flex justify-end py-4">
+      <div className="w-full flex justify-end gap-x-4 py-4">
+        {/* /admin へのリンク（ログイン時のみ表示） */}
+        {isLoggedIn && (
+          window.location.pathname.startsWith("/admin") ? (
+            <a
+              href="/"
+              className="px-4 py-2 rounded-xl bg-gray-800/70 backdrop-blur
+                        border border-gray-600 hover:bg-gray-700 font-bold"
+            >
+              🏠 ホームに戻る
+            </a>
+          ) : (
+            <a
+              href="/admin"
+              className="px-4 py-2 rounded-xl bg-gray-800/70 backdrop-blur
+                        border border-gray-600 hover:bg-gray-700 font-bold"
+            >
+              🛠️ 管理ページ
+            </a>
+          )
+        )}
+
         <button
           onClick={handleButtonClick}
           className="px-4 py-2 rounded-xl bg-gray-800/70 backdrop-blur
@@ -60,6 +81,11 @@ export default function TopBar() {
                 type={show ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleLogin();
+                  }
+                }}
                 className="w-full px-4 py-2 pr-10 rounded-lg bg-gray-900
                            border border-gray-600 focus:outline-none"
                 placeholder="パスワード"
@@ -71,7 +97,9 @@ export default function TopBar() {
                            text-gray-400 hover:text-gray-200"
                 aria-label="パスワード表示切替"
               >
-                {show ? "🙈" : "👁️"}
+                <span className="material-symbols-outlined">
+                  {show ? "visibility_off" : "visibility"}
+                </span>
               </button>
             </div>
 
