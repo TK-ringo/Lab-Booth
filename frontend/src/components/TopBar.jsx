@@ -61,9 +61,16 @@ export default function TopBar() {
         <button
           onClick={handleButtonClick}
           className="px-4 py-2 rounded-xl bg-gray-800/70 backdrop-blur
-                     border border-gray-600 hover:bg-gray-700 font-bold"
+                     border border-gray-600 hover:bg-gray-700 font-bold flex items-center"
         >
-          {isLoggedIn ? "🚪 ログアウト" : "🔑 ログイン"}
+          {/* モバイル：アイコンのみ */}
+          <span className="md:hidden">
+            {isLoggedIn ? "🚪" : "🔑"}
+          </span>
+          {/* PC：アイコン＋テキスト */}
+          <span className="hidden md:inline">
+            {isLoggedIn ? "🚪 ログアウト" : "🔑 ログイン"}
+          </span>
         </button>
       </div>
 

@@ -20,14 +20,15 @@ export default function NameSelector({
       </button>
       {open && (
         <ul
-          className="absolute top-full mt-3 w-56 max-h-72 overflow-y-auto
-                       rounded-2xl bg-gray-800/70 backdrop-blur-md
-                       shadow-glass border border-gray-700 z-40"
+          className="absolute top-full mt-3 w-[36rem]
+                     rounded-2xl bg-gray-800/70 backdrop-blur-md
+                     shadow-glass border border-gray-700 z-40
+                     grid grid-cols-4 gap-2 p-3"
         >
           {members.map((m) => (
             <li
               key={m.id}
-              className="px-4 py-2 hover:bg-gray-700/60 cursor-pointer"
+              className="px-6 py-2 hover:bg-gray-700/60 cursor-pointer text-base"
               onClick={() => {
                 setCurrentMember(m);
                 setOpen(false);

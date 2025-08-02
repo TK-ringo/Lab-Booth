@@ -36,3 +36,10 @@
 .group:hover .marquee-scroll {
   animation-play-state: running; /* ホバーで再生 */
 }
+
+/* ★ 追加 ─ PCで画面全体がスクロールしないようにする ------- */
+@media (min-width: 768px) {
+  body {
+    overflow: hidden;
+  }
+}
