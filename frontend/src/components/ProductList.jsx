@@ -40,7 +40,7 @@ export default function ProductList({ products, onAdd, onImageUpload }) {
               onClick={() => setQuery("")}
               aria-label="検索語をクリア"
               className="absolute right-3 top-1/2 -translate-y-1/2
-                         text-gray-400 hover:text-gray-200 text-xl
+                         text-gray-400 hover:text-gray-200 text-3xl
                          focus:outline-none"
             >
               ×
