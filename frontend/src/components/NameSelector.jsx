@@ -1,5 +1,5 @@
 // src/components/NameSelector.jsx
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function NameSelector({
   members,
@@ -7,9 +7,21 @@ export default function NameSelector({
   setCurrentMember,
 }) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div ref={wrapperRef} className="relative flex flex-col items-center">
       <button
         className="px-6 py-4 min-w-[12rem] rounded-2xl bg-gray-800/60
                    backdrop-blur-md shadow-glass border border-gray-700
