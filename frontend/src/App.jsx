@@ -17,6 +17,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   /* 🎵 効果音フック */
   const { play } = useSoundEffects();
@@ -81,7 +82,9 @@ export default function App() {
       setToast({ msg: "まず商品を追加してください", type: "info" });
       return;
     }
+    if (isConfirming) return; // 二重送信防止
     try {
+      setIsConfirming(true);
       const { members: ms, products: ps } = await postPurchase({
         memberId: currentMember.id,
         productIds: cart.map((p) => p.id),
@@ -95,6 +98,8 @@ export default function App() {
     } catch (err) {
       console.error(err);
       setToast({ msg: "購入処理に失敗しました😢", type: "error" });
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -154,6 +159,7 @@ export default function App() {
             cart={cart}
             onRemove={removeProduct}
             onConfirm={handleConfirm}
+            isConfirming={isConfirming}
           />
         </div>
 

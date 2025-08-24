@@ -1,7 +1,7 @@
 // src/components/CartList.jsx
 import MarqueeText from "./MarqueeText"; // ⭐ 追加
 
-export default function CartList({ cart, onRemove, onConfirm }) {
+export default function CartList({ cart, onRemove, onConfirm, isConfirming }) {
   const total = cart.reduce((sum, item) => sum + item.price, 0);
 
   return (
@@ -49,10 +49,12 @@ export default function CartList({ cart, onRemove, onConfirm }) {
 
       <button
         onClick={onConfirm}
-        className="w-full mt-6 py-3 bg-emerald-600 text-white font-bold
-                   rounded-xl hover:opacity-90 transition text-xl"
+        disabled={isConfirming}
+        className={`w-full mt-6 py-3 text-white font-bold rounded-xl transition text-xl
+                    ${isConfirming ? "bg-emerald-600/60 cursor-not-allowed" : "bg-emerald-600 hover:opacity-90"}`}
+        aria-busy={isConfirming}
       >
-        ✅ 確定する
+        {isConfirming ? "処理中…" : "✅ 確定する"}
       </button>
     </div>
   );
