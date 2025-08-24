@@ -67,7 +67,8 @@ export default function InvoiceGenerator({ token }) {
 
   /* === CSV ダウンロード === */
   const downloadCSV = () => {
-    const [y, m] = ym.split("-");
+    const [y, mStr] = ym.split("-");
+    const m = parseInt(mStr, 10);  // remove leading zero
     const head = [
       "名前",
       "繰り越し",
@@ -101,8 +102,9 @@ export default function InvoiceGenerator({ token }) {
 
   /* === PDF / 印刷 === */
   const printInvoice = () => {
-    const [y, m] = ym.split("-");
-    const today = new Date();
+  const [y, mStr] = ym.split("-");
+  const m = parseInt(mStr, 10);  // strip leading zero
+  const today = new Date();
     const todayStr = `${today.getFullYear()}/${
       today.getMonth() + 1
     }/${today.getDate()}`;
@@ -147,11 +149,13 @@ export default function InvoiceGenerator({ token }) {
             margin-top: 24px;
           }
           th, td {
-            padding: 10px 12px;
+            padding: 6px 8px;              /* 行の高さを抑えるために余白を縮小 */
+            font-size: 14px;             /* 文字サイズをわずかに縮小 */
             text-align: right;
             border-right: 1px solid var(--border);
             border-bottom: 1px solid var(--border);   /* ★ 横罫線を追加 */
           }
+          thead th { font-size: 14px; }
           th:last-child, td:last-child { border-right: none; }
           th:first-child, td:first-child { text-align: left; border-left: none; }
           thead { background: #F3F4F6; font-weight: 600; }
@@ -224,7 +228,8 @@ export default function InvoiceGenerator({ token }) {
   };
 
   /* === 画面側テーブル (略) === */
-  const [, m] = ym.split("-");
+  const [, mStr] = ym.split("-");
+  const m = parseInt(mStr, 10);  // strip leading zero for display
   return (
     <div className="flex flex-col gap-6">
       {/* 入力欄 & ボタン */}
