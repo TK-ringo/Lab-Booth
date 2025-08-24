@@ -1,6 +1,7 @@
 // frontend/src/components/InvoiceGenerator.jsx
 import { useEffect, useMemo, useState } from "react";
 import { fetchMembers } from "../api";
+import ScrollContainer from "./ScrollContainer";
 
 const ADMIN_BASE = "/api/admin";
 
@@ -226,35 +227,34 @@ export default function InvoiceGenerator({ token }) {
   /* === 画面側テーブル (略) === */
   const [, m] = ym.split("-");
   return (
-    <div className="flex flex-col gap-6">
-      {/* 入力欄 & ボタン */}
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col">
-          <span className="font-semibold mb-1">対象年月 ⏰</span>
-          <input
-            type="month"
-            value={ym}
-            onChange={(e) => setYm(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-gray-800 border border-gray-600"
-          />
-        </label>
-        <button
-          onClick={downloadCSV}
-          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold"
-        >
-          📥 CSVダウンロード
-        </button>
-        <button
-          onClick={printInvoice}
-          className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold"
-        >
-          🖨️ 印刷 / PDF保存
-        </button>
-      </div>
-
-      {/* 画面プレビュー用テーブル */}
-      <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-        <table className="min-w-full border-collapse">
+    <ScrollContainer
+      header={
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-col">
+            <span className="font-semibold mb-1">対象年月 ⏰</span>
+            <input
+              type="month"
+              value={ym}
+              onChange={(e) => setYm(e.target.value)}
+              className="px-3 py-2 rounded-lg bg-gray-800 border border-gray-600"
+            />
+          </label>
+          <button
+            onClick={downloadCSV}
+            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold"
+          >
+            📥 CSVダウンロード
+          </button>
+          <button
+            onClick={printInvoice}
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-bold"
+          >
+            🖨️ 印刷 / PDF保存
+          </button>
+        </div>
+      }
+    >
+      <table className="min-w-full border-collapse">
           <thead className="sticky top-0 bg-gray-800">
             <tr>
               <th className="px-3 py-2 text-left">名前</th>
@@ -299,8 +299,7 @@ export default function InvoiceGenerator({ token }) {
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
-    </div>
+      </table>
+    </ScrollContainer>
   );
 }
