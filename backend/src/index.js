@@ -36,6 +36,12 @@ function nowJST() {
   const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   return jst.toISOString().slice(0, 19).replace("T", " ");
 }
+// JSTで現在から指定日数を引いたYYYY-MM-DD HH:mm:ssを返す
+function jstMinusDays(days) {
+  const ms = Date.now() + 9 * 60 * 60 * 1000 - days * 24 * 60 * 60 * 1000;
+  const d = new Date(ms);
+  return d.toISOString().slice(0, 19).replace("T", " ");
+}
 function adjustProductStock(productId, delta, newPrice = null) {
   if (!productId || isNaN(delta)) return;
   db.prepare("UPDATE products SET stock = stock + ? WHERE id = ?").run(
@@ -229,6 +235,100 @@ app.use((err, _req, res, next) => {
 /* ======== 🔐 管理者 API ======== */
 const VALID_TABLES = ["members", "products", "purchases", "restock_history"];
 app.use("/api/admin", adminAuth);
+
+/* ===== 次買うべき候補（在庫・購買頻度ベース） ===== */
+app.get("/api/admin/restock-suggestions", (req, res) => {
+  try {
+    // パラメータ
+    const days = Number(req.query.days ?? 30);
+    const days7 = 7; // 7日間は固定で別指標
+    const limit = Math.min(Number(req.query.limit ?? 100), 500);
+    const targetDays = Number(req.query.targetDays ?? 14); // 何日分を確保するか
+    const safetyDays = Number(req.query.safetyDays ?? 3); // 安全在庫(日)
+    const minSold = Number(req.query.minSold ?? 1); // 候補に含める最低販売数
+    const includeZeroVelocityWhenOOS = String(req.query.includeOOS ?? "false") === "true"; // 在庫ゼロは販売実績なくても含める
+
+    const since7 = jstMinusDays(days7);
+    const sinceN = jstMinusDays(days);
+
+    // products と purchases を集計結合
+    const rows = db
+      .prepare(
+        `
+        SELECT
+          pr.id,
+          pr.name,
+          pr.barcode,
+          pr.price,
+          pr.stock,
+          SUM(CASE WHEN p.timestamp >= ? THEN 1 ELSE 0 END) AS sold_7d,
+          SUM(CASE WHEN p.timestamp >= ? THEN 1 ELSE 0 END) AS sold_nd,
+          COALESCE(MAX(p.timestamp), '') AS last_sold_at
+        FROM products pr
+        LEFT JOIN purchases p ON p.product_id = pr.id
+        GROUP BY pr.id
+        `
+      )
+      .all(since7, sinceN);
+
+    // JS側で優先度・推奨発注数を計算
+    const suggestions = rows
+      .map((r) => {
+        const sold7 = Number(r.sold_7d || 0);
+        const soldN = Number(r.sold_nd || 0);
+        const avg7d = sold7 / days7;      // 直近7日間の1日あたり販売数
+        const avgNd = soldN / Math.max(days, 1);       // 直近N日間の1日あたり販売数
+        const isTrending = avg7d > avgNd;
+        const stock = Number(r.stock || 0);
+        const isOOS = stock <= 0;
+        const velocity = isTrending ? avg7d : avgNd; // 1日あたり
+        const daysOfSupply = velocity > 0 ? stock / velocity : (isOOS ? 0 : 9999);
+        // 推奨数量 = (ターゲット日数 + 安全在庫日数) * 速度 - 現在庫
+        const targetQtyFloat = velocity * (targetDays + safetyDays) - stock;
+        let suggestedQty = Math.ceil(Math.max(0, targetQtyFloat));
+        if (isOOS && velocity === 0 && includeZeroVelocityWhenOOS) {
+          // 実績ゼロだが在庫ゼロのものは最小1個提案
+          suggestedQty = Math.max(suggestedQty, 1);
+        }
+
+        // 理由
+        let reason = "";
+        if (isOOS) reason = "在庫切れ";
+        else if (velocity > 0 && daysOfSupply < targetDays) reason = `在庫が${Math.ceil(daysOfSupply)}日分しかない`;
+        else if (isTrending) reason = "最近よく売れている";
+
+        return {
+          id: r.id,
+          name: r.name,
+          barcode: r.barcode,
+          price: r.price,
+          stock,
+          sold_7d: sold7,
+          sold_nd: soldN,
+          window_days: days,
+          velocity_per_day: Number(velocity.toFixed(3)),
+          days_of_supply: Number(daysOfSupply === 9999 ? 9999 : daysOfSupply.toFixed(1)),
+          last_sold_at: r.last_sold_at,
+          suggested_qty: suggestedQty,
+          reason,
+        };
+      })
+      .filter((r) => {
+        // フィルタ：販売数が一定以上、または在庫切れ（設定による）
+        if (r.suggested_qty <= 0) return false;
+        if (r.sold_nd >= minSold) return true;
+        if (includeZeroVelocityWhenOOS && r.stock <= 0) return true;
+        return false;
+      })
+      .sort((a, b) => b.suggested_qty - a.suggested_qty)
+      .slice(0, limit);
+
+    res.json({ suggestions, meta: { days, targetDays, safetyDays, minSold, limit } });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "候補の計算に失敗しました" });
+  }
+});
 
 app.get("/api/admin/invoice-summary", (req, res) => {
   try {
