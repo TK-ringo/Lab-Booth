@@ -6,6 +6,7 @@ import {
   useImperativeHandle,
   useState,
 } from "react";
+import ScrollContainer from "./ScrollContainer";
 
 const BASE = "/api/admin";
 
@@ -37,24 +38,24 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
     const res = await fetch(`${BASE}/${table}/columns`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const { columns } = await res.json();
-    setColumns(columns);
+  const { columns: fetchedColumns } = await res.json();
+  setColumns(fetchedColumns);
   }, [table, token]);
 
   /* データ取得 */
   const fetchRows = useCallback(
     async (ord = order) => {
       if (!table) return;
-      const res = await fetch(`${BASE}/${table}?order=${ord}`, {
+  const res = await fetch(`${BASE}/${table}?order=${ord}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const { rows } = await res.json();
-      setRows(rows.map(editableCopy));
+  const { rows: fetchedRows } = await res.json();
+  setRows(fetchedRows.map(editableCopy));
       setDirty({});
       setDeleted(new Set());
       setNewRows([]);
       /* 列が空なら schema から取得 */
-      if (rows.length) setColumns(Object.keys(rows[0]));
+  if (fetchedRows.length) setColumns(Object.keys(fetchedRows[0]));
       else await fetchColumns();
     },
     [table, order, token, fetchColumns]
@@ -107,52 +108,85 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
   useImperativeHandle(ref, () => ({
     async commit() {
       /* 削除 */
-      for (const id of deleted) {
-        await fetch(`${BASE}/${table}/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
+      await Promise.all(
+        Array.from(deleted).map((id) =>
+          fetch(`${BASE}/${table}/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
       /* 更新 */
-      for (const row of Object.values(dirty)) {
-        await fetch(`${BASE}/${table}/${row.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(row),
-        });
-      }
+      await Promise.all(
+        Object.values(dirty).map((row) =>
+          fetch(`${BASE}/${table}/${row.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(row),
+          })
+        )
+      );
       /* 追加 */
-      for (const row of newRows) {
-        const { __tempId, ...body } = row;
-        await fetch(`${BASE}/${table}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(body),
-        });
-      }
+      await Promise.all(
+        newRows.map(({ __tempId, ...body }) =>
+          fetch(`${BASE}/${table}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+          })
+        )
+      );
       alert("👌 反映しました！（自動リロードします）");
       window.location.reload();
     },
   }));
 
+  /* ----------- ヘルパ: セル描画 ----------- */
+  const renderCells = (row, idx, isNewRow = false) =>
+    columns.map((col) => (
+      <td key={col} className="px-3 py-1">
+        {col === "id" ? (
+          isNewRow ? "NEW" : row[col]
+        ) : (
+          <input
+            value={row[col] ?? ""}
+            onChange={(e) =>
+              handleChange(idx, col, e.target.value, isNewRow)
+            }
+            className="w-full bg-transparent border-b border-gray-600 focus:outline-none"
+          />
+        )}
+      </td>
+    ));
+
   /* ----------- 描画 ----------- */
   if (!columns.length) return <p className="text-gray-400">列情報を取得中…</p>;
 
   return (
-    <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
-      <button
-        onClick={() => setOrder(order === "asc" ? "desc" : "asc")}
-        className="mb-2 px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600"
-      >
-        🔃 {order === "asc" ? "昇順" : "降順"}
-      </button>
-
+    <ScrollContainer
+      header={
+        <button
+          onClick={() => setOrder(order === "asc" ? "desc" : "asc")}
+          className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600"
+        >
+          🔃 {order === "asc" ? "昇順" : "降順"}
+        </button>
+      }
+      footer={
+        <button
+          onClick={addRow}
+          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500"
+        >
+          ➕ 行を追加
+        </button>
+      }
+    >
       <table className="min-w-full border-collapse">
         <thead className="sticky top-0 bg-gray-800 z-10">
           <tr>
@@ -166,7 +200,7 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
         </thead>
         <tbody>
           {/* 既存行 */}
-          {rows.map((row, idx) => {
+      {rows.map((row, idx) => {
             const isDeleted = deleted.has(row.id);
             return (
               <tr
@@ -179,19 +213,7 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
                     : ""
                 }
               >
-                {columns.map((col) => (
-                  <td key={col} className="px-3 py-1">
-                    {col === "id" ? (
-                      row[col]
-                    ) : (
-                      <input
-                        value={row[col]}
-                        onChange={(e) => handleChange(idx, col, e.target.value)}
-                        className="w-full bg-transparent border-b border-gray-600 focus:outline-none"
-                      />
-                    )}
-                  </td>
-                ))}
+        {renderCells(row, idx, false)}
                 <td className="px-3 py-1 text-center">
                   <button
                     onClick={() => toggleDelete(row.id)}
@@ -205,36 +227,15 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
           })}
 
           {/* 新規行 */}
-          {newRows.map((row, idx) => (
+      {newRows.map((row, idx) => (
             <tr key={row.__tempId} className="bg-emerald-900/30">
-              {columns.map((col) => (
-                <td key={col} className="px-3 py-1">
-                  {col === "id" ? (
-                    "NEW"
-                  ) : (
-                    <input
-                      value={row[col] ?? ""}
-                      onChange={(e) =>
-                        handleChange(idx, col, e.target.value, true)
-                      }
-                      className="w-full bg-transparent border-b border-gray-600 focus:outline-none"
-                    />
-                  )}
-                </td>
-              ))}
+      {renderCells(row, idx, true)}
               <td />
             </tr>
           ))}
         </tbody>
       </table>
-
-      <button
-        onClick={addRow}
-        className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500"
-      >
-        ➕ 行を追加
-      </button>
-    </div>
+    </ScrollContainer>
   );
 });
 

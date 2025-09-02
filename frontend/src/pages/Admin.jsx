@@ -5,6 +5,7 @@ import TopBar from "../components/TopBar";
 import AdminTable from "../components/AdminTable";
 import RestockForm from "../components/RestockForm";
 import InvoiceGenerator from "../components/InvoiceGenerator";
+import RestockSuggestions from "../components/RestockSuggestions";
 
 export default function Admin() {
   const { token, isLoggedIn } = useContext(AuthContext);
@@ -28,9 +29,14 @@ export default function Admin() {
     { key: "products", label: "商品一覧", type: "table" },
     { key: "purchases", label: "購入履歴", type: "table" },
     { key: "restock_history", label: "仕入れ履歴", type: "table" },
+    { key: "restock_suggestions", label: "仕入れ候補", type: "suggest" },
     { key: "restock_import", label: "仕入れ登録", type: "import" },
     { key: "invoice", label: "請求書作成", type: "invoice" },
   ];
+
+  // 現在のタブ情報を一度だけ算出
+  const currentTab = tabs.find((t) => t.key === tab);
+  const currentType = currentTab?.type;
 
   /* ----- タブごとの中身 ----- */
   const renderBody = () => {
@@ -39,20 +45,19 @@ export default function Admin() {
         <p className="text-gray-400">上のボタンで機能を選択してください 😊</p>
       );
 
-    const cur = tabs.find((t) => t.key === tab);
-    if (cur.type === "table")
+    if (currentType === "table")
       return <AdminTable ref={ref} table={tab} token={token} key={tab} />;
-    if (cur.type === "import")
+    if (currentType === "import")
       return <RestockForm ref={ref} token={token} key="import" />;
-    if (cur.type === "invoice")
+    if (currentType === "invoice")
       return <InvoiceGenerator token={token} key="inv" />;
+    if (currentType === "suggest")
+      return <RestockSuggestions token={token} key="sug" />;
   };
-
-  const currentType = tabs.find((t) => t.key === tab)?.type;
 
   /* ----- 画面 ----- */
   return (
-    <div className="min-h-screen bg-black text-gray-100 font-sans px-6 py-6">
+    <div className="h-screen overflow-hidden flex flex-col bg-black text-gray-100 font-sans px-6 py-6">
       <TopBar />
 
       <header className="flex flex-wrap items-center gap-4 mb-8">
@@ -74,13 +79,15 @@ export default function Admin() {
           onClick={() => ref.current?.commit()}
           className="ml-auto px-6 py-2 rounded-xl bg-emerald-600
                      hover:bg-emerald-500 font-bold shadow-lg"
-          disabled={!tab || currentType === "invoice"}
+          disabled={!tab || currentType === "invoice" || currentType === "suggest"}
         >
           ✅ 確定
         </button>
       </header>
 
-      {renderBody()}
+      <div className="flex-1 overflow-hidden">
+        {renderBody()}
+      </div>
     </div>
   );
 }
