@@ -2,7 +2,7 @@
 import { useContext, useState, useCallback } from "react";
 import { AuthContext } from "../contexts/AuthContext"; // ← 相対パス修正
 
-export default function TopBar() {
+export default function TopBar({ children }) {
   const { isLoggedIn, login, logout } = useContext(AuthContext);
 
   /* ------- モーダル状態 ------- */
@@ -73,6 +73,9 @@ export default function TopBar() {
           {isLoggedIn ? "🚪 ログアウト" : "🔑 ログイン"}
         </button>
       </div>
+
+  {/* ログインボタン下の任意コンテンツ */}
+  {children}
 
       {/* ===== モーダル本体 ===== */}
       {isModalOpen && (

@@ -17,6 +17,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [toast, setToast] = useState(null);
   const [isLoading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("icons-lg"); // 大をデフォルト
   const [isConfirming, setIsConfirming] = useState(false);
   const isMounted = useRef(true);
 
@@ -45,6 +46,19 @@ export default function App() {
       }
     })();
   }, []);
+
+  // 表示モードの永続化（名前ごと）
+  useEffect(() => {
+    if (!currentMember?.name) return; // 未選択時は保存しない/読み込まない
+    const key = `labbooth:viewMode:${currentMember.name}`;
+    const saved = localStorage.getItem(key);
+    setViewMode(saved || "icons-lg");
+  }, [currentMember?.name]);
+  useEffect(() => {
+    if (!currentMember?.name) return;
+    const key = `labbooth:viewMode:${currentMember.name}`;
+    localStorage.setItem(key, viewMode);
+  }, [viewMode, currentMember?.name]);
 
   /* ---------- カート追加 ---------- */
   /**
@@ -140,7 +154,32 @@ export default function App() {
   /* ---------- 画面描画 ---------- */
   return (
     <>
-      <TopBar />
+      <TopBar>
+        {/* 表示切替（ログインボタン下に表示） */}
+        <div className="w-full flex justify-end px-4 -mt-4">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-gray-400 mr-1">表示:</span>
+            {[
+              { id: "icons-lg", label: "大" },
+              { id: "icons-md", label: "中" },
+              { id: "icons-sm", label: "小" },
+              { id: "details", label: "詳細" },
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setViewMode(m.id)}
+                className={`px-3 py-1 rounded-full border transition ${
+                  viewMode === m.id
+                    ? "bg-indigo-600 text-white border-indigo-500"
+                    : "bg-gray-800/60 text-gray-200 border-gray-700 hover:bg-gray-700/60"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </TopBar>
       <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col gap-16 pb-40">
         <h1
           className="text-5xl md:text-6xl font-extrabold text-center tracking-wider
@@ -164,6 +203,7 @@ export default function App() {
             products={products}
             onAdd={addProduct}          
             onImageUpload={handleImageUpload}
+            viewMode={viewMode}
           />
           <CartList
             cart={cart}
