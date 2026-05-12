@@ -77,6 +77,7 @@ export default function ProductList({ products, onAdd, onImageUpload }) {
       <div className="flex-1 min-h-0">
         <VirtuosoGrid
           data={filtered}
+          computeItemKey={(_, product) => product.id}
           style={{ height: "min(31.5rem, calc(100vh - 14rem))" }}
           className="scroll-smooth"
           components={{
@@ -86,7 +87,6 @@ export default function ProductList({ products, onAdd, onImageUpload }) {
           }}
           itemContent={(_, product) => (
             <ProductCard
-              key={product.id}
               product={product}
               onAdd={onAdd}
               onImageUpload={onImageUpload}

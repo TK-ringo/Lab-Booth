@@ -1,0 +1,630 @@
+openapi: 3.0.3
+info:
+  title: Lab Booth Backend API
+  version: 1.0.0
+  description: API specification for the Lab Booth backend.
+servers:
+  - url: http://localhost:3001
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+    adminPass:
+      type: apiKey
+      in: header
+      name: x-admin-pass
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required: [id, name]
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+        barcode:
+          type: string
+        image:
+          type: string
+      required: [id, name, price, stock]
+    Purchase:
+      type: object
+      properties:
+        id:
+          type: integer
+        member_id:
+          type: integer
+        member_name:
+          type: string
+        product_id:
+          type: integer
+        product_name:
+          type: string
+        timestamp:
+          type: string
+      required: [id, member_id, product_id, timestamp]
+    RestockHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        product_name:
+          type: string
+        barcode:
+          type: string
+        unit_price:
+          type: integer
+        price:
+          type: integer
+        quantity:
+          type: integer
+        subtotal:
+          type: integer
+        timestamp:
+          type: string
+      required: [id, product_id, product_name, barcode, unit_price, price, quantity, subtotal, timestamp]
+    RestockSuggestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        barcode:
+          type: string
+        price:
+          type: integer
+        stock:
+          type: integer
+        sold_7d:
+          type: integer
+        sold_nd:
+          type: integer
+        window_days:
+          type: integer
+        velocity_per_day:
+          type: number
+        days_of_supply:
+          type: number
+        last_sold_at:
+          type: string
+        suggested_qty:
+          type: integer
+        reason:
+          type: string
+      required: [id, name, stock, sold_7d, sold_nd, window_days, velocity_per_day, days_of_supply, suggested_qty]
+paths:
+  /api/login:
+    post:
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+              required: [password]
+      responses:
+        "200":
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                required: [token]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/members:
+    get:
+      summary: List members
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Member"
+                required: [members]
+  /api/products:
+    get:
+      summary: List products
+      responses:
+        "200":
+          description: Products list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+                required: [products]
+  /api/purchase:
+    post:
+      summary: Create a purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                memberId:
+                  type: integer
+                productIds:
+                  type: array
+                  items:
+                    type: integer
+              required: [memberId, productIds]
+      responses:
+        "200":
+          description: Updated members/products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Member"
+                  products:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+                required: [members, products]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Duplicate request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/products/{id}/image:
+    post:
+      summary: Upload product image
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required: [image]
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    $ref: "#/components/schemas/Product"
+                required: [product]
+        "400":
+          description: Missing image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/restock-suggestions:
+    get:
+      summary: Get restock suggestions
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 30
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: targetDays
+          schema:
+            type: integer
+            default: 14
+        - in: query
+          name: safetyDays
+          schema:
+            type: integer
+            default: 3
+        - in: query
+          name: minSold
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: includeOOS
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RestockSuggestion"
+                  meta:
+                    type: object
+                    properties:
+                      days:
+                        type: integer
+                      targetDays:
+                        type: integer
+                      safetyDays:
+                        type: integer
+                      minSold:
+                        type: integer
+                      limit:
+                        type: integer
+                    required: [days, targetDays, safetyDays, minSold, limit]
+                required: [suggestions, meta]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/invoice-summary:
+    get:
+      summary: Get invoice summary
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+        - in: query
+          name: month
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        member_id:
+                          type: integer
+                        member_name:
+                          type: string
+                        settlement:
+                          type: integer
+                      required: [member_id, member_name, settlement]
+                required: [rows]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/{table}/columns:
+    get:
+      summary: Get table columns
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: path
+          name: table
+          required: true
+          schema:
+            type: string
+            enum: [members, products, purchases, restock_history]
+      responses:
+        "200":
+          description: Columns list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  columns:
+                    type: array
+                    items:
+                      type: string
+                required: [columns]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/{table}:
+    get:
+      summary: Get table rows
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: path
+          name: table
+          required: true
+          schema:
+            type: string
+            enum: [members, products, purchases, restock_history]
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        "200":
+          description: Rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                required: [rows]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create table row
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: path
+          name: table
+          required: true
+          schema:
+            type: string
+            enum: [members, products, purchases, restock_history]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                required: [id]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/{table}/{id}:
+    put:
+      summary: Update table row
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: path
+          name: table
+          required: true
+          schema:
+            type: string
+            enum: [members, products, purchases, restock_history]
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete table row
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      parameters:
+        - in: path
+          name: table
+          required: true
+          schema:
+            type: string
+            enum: [members, products, purchases, restock_history]
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/admin/restock/import:
+    post:
+      summary: Import restock text
+      security:
+        - bearerAuth: []
+        - basicAuth: []
+        - adminPass: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+              required: [text]
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  imported:
+                    type: integer
+                required: [ok, imported]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

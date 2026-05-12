@@ -31,6 +31,14 @@ function editableCopy(row) {
   return copy;
 }
 
+const VirtuosoTable = (props) => (
+  <table {...props} className="min-w-full border-collapse" />
+);
+
+const VirtuosoTableHead = (props) => (
+  <thead {...props} className="bg-gray-800 z-10" />
+);
+
 const AdminTable = forwardRef(({ table, token }, ref) => {
   const [columns, setColumns] = useState([]);
   const [rows, setRows] = useState([]);
@@ -140,9 +148,9 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
   }));
 
   /* ----------- ヘルパ: セル描画 ----------- */
-  const renderCells = (row, idx, isNewRow = false) =>
+  const renderCells = (row, idx, isNewRow = false, rowClass = "") =>
     columns.map((col) => (
-      <td key={col} className="px-3 py-1">
+      <td key={col} className={`px-3 py-1 ${rowClass}`}>
         {col === "id" ? (
           isNewRow ? "NEW" : row[col]
         ) : (
@@ -183,6 +191,9 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
     >
       <TableVirtuoso
         data={tableData}
+        computeItemKey={(_, item) =>
+          item.kind === "new" ? `new-${item.row.__tempId}` : `existing-${item.row.id}`
+        }
         style={{ height: "100%" }}
         fixedHeaderContent={() => (
           <tr>
@@ -198,18 +209,23 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
           if (item.kind === "new") {
             return (
               <>
-                {renderCells(item.row, item.idx, true)}
+                {renderCells(item.row, item.idx, true, "bg-emerald-900/30")}
                 <td />
               </>
             );
           }
 
           const isDeleted = deleted.has(item.row.id);
+          const rowClass = isDeleted
+            ? "bg-red-900/40 line-through"
+            : item.idx % 2
+            ? "bg-gray-800/50"
+            : "";
 
           return (
             <>
-              {renderCells(item.row, item.idx, false)}
-              <td className="px-3 py-1 text-center">
+              {renderCells(item.row, item.idx, false, rowClass)}
+              <td className={`px-3 py-1 text-center ${rowClass}`}>
                 <button
                   onClick={() => toggleDelete(item.row.id)}
                   className="text-red-400 hover:text-red-300"
@@ -221,33 +237,8 @@ const AdminTable = forwardRef(({ table, token }, ref) => {
           );
         }}
         components={{
-          Table: (props) => (
-            <table {...props} className="min-w-full border-collapse" />
-          ),
-          TableHead: (props) => (
-            <thead {...props} className="bg-gray-800 z-10" />
-          ),
-          TableRow: (props) => {
-            const dataIndex = Number(
-              props["data-index"] ?? props["data-item-index"]
-            );
-            const item = tableData[dataIndex];
-
-            if (!item) return <tr {...props} />;
-
-            if (item.kind === "new") {
-              return <tr {...props} className="bg-emerald-900/30" />;
-            }
-
-            const isDeleted = deleted.has(item.row.id);
-            const rowClass = isDeleted
-              ? "bg-red-900/40 line-through"
-              : item.idx % 2
-              ? "bg-gray-800/50"
-              : "";
-
-            return <tr {...props} className={rowClass} />;
-          },
+          Table: VirtuosoTable,
+          TableHead: VirtuosoTableHead,
         }}
       />
     </ScrollContainer>
